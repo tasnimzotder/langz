@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tasnimzotder/langz/ast"
-	"github.com/tasnimzotder/langz/codegen/builtins"
+	"github.com/tasnimzotder/langz/internal/ast"
+	"github.com/tasnimzotder/langz/internal/codegen/builtins"
 )
 
 func (g *Generator) genStatement(node ast.Node) {

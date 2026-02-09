@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tasnimzotder/langz/ast"
+	"github.com/tasnimzotder/langz/internal/ast"
 )
 
 var stmtBuiltins = map[string]builtinHandler{

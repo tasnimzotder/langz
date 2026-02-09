@@ -183,7 +183,7 @@ func TestAllComparisonOperators(t *testing.T) {
 }
 
 func TestArithmeticOperators(t *testing.T) {
-	assertTokens(t, `a + b - c * d / e`, []Token{
+	assertTokens(t, `a + b - c * d / e % f`, []Token{
 		{Type: IDENT, Value: "a"},
 		{Type: PLUS, Value: "+"},
 		{Type: IDENT, Value: "b"},
@@ -193,6 +193,32 @@ func TestArithmeticOperators(t *testing.T) {
 		{Type: IDENT, Value: "d"},
 		{Type: SLASH, Value: "/"},
 		{Type: IDENT, Value: "e"},
+		{Type: PERCENT, Value: "%"},
+		{Type: IDENT, Value: "f"},
+	})
+}
+
+func TestModuloOperator(t *testing.T) {
+	assertTokens(t, `x = a % b`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: IDENT, Value: "a"},
+		{Type: PERCENT, Value: "%"},
+		{Type: IDENT, Value: "b"},
+	})
+}
+
+func TestParenthesizedExpression(t *testing.T) {
+	assertTokens(t, `x = (a + b) * c`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: LPAREN, Value: "("},
+		{Type: IDENT, Value: "a"},
+		{Type: PLUS, Value: "+"},
+		{Type: IDENT, Value: "b"},
+		{Type: RPAREN, Value: ")"},
+		{Type: STAR, Value: "*"},
+		{Type: IDENT, Value: "c"},
 	})
 }
 

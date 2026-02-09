@@ -1,7 +1,7 @@
 package builtins
 
 import (
-	"github.com/tasnimzotder/langz/ast"
+	"github.com/tasnimzotder/langz/internal/ast"
 )
 
 // ExprGen is a function that converts an AST node to a Bash expression string.

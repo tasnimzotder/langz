@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasnimzotder/langz/codegen"
-	"github.com/tasnimzotder/langz/lexer"
-	"github.com/tasnimzotder/langz/parser"
+	"github.com/tasnimzotder/langz/internal/codegen"
+	"github.com/tasnimzotder/langz/internal/lexer"
+	"github.com/tasnimzotder/langz/internal/parser"
 )
 
 func main() {

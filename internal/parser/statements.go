@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"github.com/tasnimzotder/langz/ast"
-	"github.com/tasnimzotder/langz/lexer"
+	"github.com/tasnimzotder/langz/internal/ast"
+	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
 func (p *Parser) parseStatement() ast.Node {

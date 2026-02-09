@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tasnimzotder/langz/ast"
-	"github.com/tasnimzotder/langz/lexer"
+	"github.com/tasnimzotder/langz/internal/ast"
+	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
 func parse(input string) *ast.Program {
@@ -409,4 +409,110 @@ func TestLogicalAnd(t *testing.T) {
 	bin, ok := ifStmt.Condition.(*ast.BinaryExpr)
 	require.True(t, ok, "expected BinaryExpr")
 	assert.Equal(t, "and", bin.Op)
+}
+
+func TestModuloExpression(t *testing.T) {
+	prog := parse(`x = a % b`)
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+	bin, ok := assign.Value.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, "%", bin.Op)
+}
+
+func TestOperatorPrecedence(t *testing.T) {
+	// a + b * c should parse as a + (b * c)
+	prog := parse(`x = a + b * c`)
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	// Top-level should be +
+	add, ok := assign.Value.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr at top level")
+	assert.Equal(t, "+", add.Op)
+
+	// Left of + should be identifier 'a'
+	left, ok := add.Left.(*ast.Identifier)
+	require.True(t, ok, "expected Identifier on left of +")
+	assert.Equal(t, "a", left.Name)
+
+	// Right of + should be b * c
+	mul, ok := add.Right.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on right of +")
+	assert.Equal(t, "*", mul.Op)
+}
+
+func TestOperatorPrecedenceSubtractDivide(t *testing.T) {
+	// a - b / c should parse as a - (b / c)
+	prog := parse(`x = a - b / c`)
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	sub, ok := assign.Value.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, "-", sub.Op)
+
+	div, ok := sub.Right.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on right of -")
+	assert.Equal(t, "/", div.Op)
+}
+
+func TestParenthesizedExpression(t *testing.T) {
+	// (a + b) * c should parse as (a + b) * c
+	prog := parse(`x = (a + b) * c`)
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	// Top-level should be *
+	mul, ok := assign.Value.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr at top level")
+	assert.Equal(t, "*", mul.Op)
+
+	// Left of * should be a + b (from parentheses)
+	add, ok := mul.Left.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on left of *")
+	assert.Equal(t, "+", add.Op)
+
+	// Right of * should be identifier 'c'
+	right, ok := mul.Right.(*ast.Identifier)
+	require.True(t, ok, "expected Identifier on right of *")
+	assert.Equal(t, "c", right.Name)
+}
+
+func TestNestedArithmetic(t *testing.T) {
+	// a * b + c * d should parse as (a * b) + (c * d)
+	prog := parse(`x = a * b + c * d`)
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	add, ok := assign.Value.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, "+", add.Op)
+
+	leftMul, ok := add.Left.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on left")
+	assert.Equal(t, "*", leftMul.Op)
+
+	rightMul, ok := add.Right.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on right")
+	assert.Equal(t, "*", rightMul.Op)
+}
+
+func TestArithmeticWithComparison(t *testing.T) {
+	// if a + b > c * d — comparison should be at top, arithmetic deeper
+	prog := parse(`if a + b > c * d { print("yes") }`)
+	require.Len(t, prog.Statements, 1)
+	ifStmt := prog.Statements[0].(*ast.IfStmt)
+
+	cond, ok := ifStmt.Condition.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, ">", cond.Op)
+
+	left, ok := cond.Left.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on left of >")
+	assert.Equal(t, "+", left.Op)
+
+	right, ok := cond.Right.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on right of >")
+	assert.Equal(t, "*", right.Op)
 }

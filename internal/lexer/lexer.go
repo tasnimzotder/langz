@@ -165,6 +165,9 @@ func (l *Lexer) Tokenize() []Token {
 		case l.current == '/':
 			tokens = append(tokens, l.token(SLASH, "/", line, col))
 			l.advance()
+		case l.current == '%':
+			tokens = append(tokens, l.token(PERCENT, "%", line, col))
+			l.advance()
 		case l.current == '(':
 			tokens = append(tokens, l.token(LPAREN, "(", line, col))
 			l.advance()

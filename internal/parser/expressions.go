@@ -1,11 +1,64 @@
 package parser
 
 import (
-	"github.com/tasnimzotder/langz/ast"
-	"github.com/tasnimzotder/langz/lexer"
+	"github.com/tasnimzotder/langz/internal/ast"
+	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
 func (p *Parser) parseExpression() ast.Node {
+	left := p.parseComparison()
+
+	// Handle logical operators: and, or (in condition context)
+	for p.current.Type == lexer.AND {
+		op := p.current.Value
+		p.advance()
+		right := p.parseComparison()
+		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
+	}
+
+	return left
+}
+
+func (p *Parser) parseComparison() ast.Node {
+	left := p.parseAdditive()
+
+	if isComparisonOp(p.current.Type) {
+		op := p.current.Value
+		p.advance()
+		right := p.parseAdditive()
+		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
+	}
+
+	return left
+}
+
+func (p *Parser) parseAdditive() ast.Node {
+	left := p.parseMultiplicative()
+
+	for p.current.Type == lexer.PLUS || p.current.Type == lexer.MINUS {
+		op := p.current.Value
+		p.advance()
+		right := p.parseMultiplicative()
+		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
+	}
+
+	return left
+}
+
+func (p *Parser) parseMultiplicative() ast.Node {
+	left := p.parseUnary()
+
+	for p.current.Type == lexer.STAR || p.current.Type == lexer.SLASH || p.current.Type == lexer.PERCENT {
+		op := p.current.Value
+		p.advance()
+		right := p.parseUnary()
+		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
+	}
+
+	return left
+}
+
+func (p *Parser) parseUnary() ast.Node {
 	left := p.parsePrimary()
 
 	// Handle dot access: expr.field
@@ -13,31 +66,6 @@ func (p *Parser) parseExpression() ast.Node {
 		p.advance()
 		field := p.expect(lexer.IDENT)
 		left = &ast.DotExpr{Object: left, Field: field.Value}
-	}
-
-	// Handle arithmetic operators: expr +/- expr
-	for p.current.Type == lexer.PLUS || p.current.Type == lexer.MINUS ||
-		p.current.Type == lexer.STAR || p.current.Type == lexer.SLASH {
-		op := p.current.Value
-		p.advance()
-		right := p.parsePrimary()
-		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
-	}
-
-	// Handle comparison operators
-	if isComparisonOp(p.current.Type) {
-		op := p.current.Value
-		p.advance()
-		right := p.parsePrimary()
-		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
-	}
-
-	// Handle logical operators: and, or (in condition context)
-	if p.current.Type == lexer.AND {
-		op := p.current.Value
-		p.advance()
-		right := p.parseExpression()
-		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
 	}
 
 	return left
@@ -72,6 +100,14 @@ func (p *Parser) parsePrimary() ast.Node {
 		p.advance()
 		operand := p.parsePrimary()
 		return &ast.UnaryExpr{Op: "!", Operand: operand}
+
+	case lexer.LPAREN:
+		// Check if this is a function call (handled elsewhere) or grouped expression
+		// Grouped expression: (expr)
+		p.advance() // skip (
+		expr := p.parseExpression()
+		p.expect(lexer.RPAREN)
+		return expr
 
 	case lexer.LBRACKET:
 		return p.parseListLiteral()

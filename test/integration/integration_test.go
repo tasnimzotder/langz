@@ -1,4 +1,4 @@
-package langz_test
+package integration_test
 
 import (
 	"os"
@@ -9,10 +9,25 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tasnimzotder/langz/codegen"
-	"github.com/tasnimzotder/langz/lexer"
-	"github.com/tasnimzotder/langz/parser"
+	"github.com/tasnimzotder/langz/internal/codegen"
+	"github.com/tasnimzotder/langz/internal/lexer"
+	"github.com/tasnimzotder/langz/internal/parser"
 )
+
+// projectRoot returns the module root by walking up from the test directory.
+func projectRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		require.NotEqual(t, dir, parent, "could not find go.mod")
+		dir = parent
+	}
+}
 
 func compileSource(t *testing.T, source string) string {
 	t.Helper()
@@ -280,8 +295,9 @@ func TestE2E_CLIBuild(t *testing.T) {
 	require.NoError(t, err)
 
 	// Build using go run
+	root := projectRoot(t)
 	cmd := exec.Command("go", "run", "./cmd/langz", "build", lzFile)
-	cmd.Dir = "."
+	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "build failed: %s", string(out))
 
@@ -302,8 +318,9 @@ func TestE2E_CLIRun(t *testing.T) {
 	err := os.WriteFile(lzFile, []byte(`print("run works")`), 0644)
 	require.NoError(t, err)
 
+	root := projectRoot(t)
 	cmd := exec.Command("go", "run", "./cmd/langz", "run", lzFile)
-	cmd.Dir = "."
+	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "run failed: %s", string(out))
 
@@ -721,6 +738,105 @@ print(report)
 	assert.Contains(t, output, "Host:")
 	assert.Contains(t, output, "User:")
 	assert.Contains(t, output, "OS:")
+}
+
+func TestE2E_Modulo(t *testing.T) {
+	source := `
+a = 10
+b = 3
+result = a % b
+print(result)
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "1", strings.TrimSpace(output))
+}
+
+func TestE2E_OperatorPrecedence(t *testing.T) {
+	source := `
+// 2 + 3 * 4 should be 14 (not 20)
+result = 2 + 3 * 4
+print(result)
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "14", strings.TrimSpace(output))
+}
+
+func TestE2E_ParenthesizedExpression(t *testing.T) {
+	source := `
+// (2 + 3) * 4 should be 20
+result = (2 + 3) * 4
+print(result)
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "20", strings.TrimSpace(output))
+}
+
+func TestE2E_ComplexMath(t *testing.T) {
+	source := `
+// Test multiple operations with correct precedence
+a = 10
+b = 3
+c = 2
+
+sum = a + b
+diff = a - b
+prod = a * b
+quot = a / b
+rem = a % b
+complex = (a + b) * c
+nested = a * b + c * b
+
+print(sum)
+print(diff)
+print(prod)
+print(quot)
+print(rem)
+print(complex)
+print(nested)
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	require.Len(t, lines, 7)
+	assert.Equal(t, "13", lines[0])  // 10 + 3
+	assert.Equal(t, "7", lines[1])   // 10 - 3
+	assert.Equal(t, "30", lines[2])  // 10 * 3
+	assert.Equal(t, "3", lines[3])   // 10 / 3 (integer division)
+	assert.Equal(t, "1", lines[4])   // 10 % 3
+	assert.Equal(t, "26", lines[5])  // (10 + 3) * 2
+	assert.Equal(t, "36", lines[6])  // 10 * 3 + 2 * 3
+}
+
+func TestE2E_ArithmeticInCondition(t *testing.T) {
+	source := `
+a = 5
+b = 3
+if a + b > 7 {
+	print("sum is big")
+}
+if a * b > 20 {
+	print("product is big")
+} else {
+	print("product is small")
+}
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Contains(t, output, "sum is big")
+	assert.Contains(t, output, "product is small")
 }
 
 func mustReadFile(t *testing.T, path string) string {

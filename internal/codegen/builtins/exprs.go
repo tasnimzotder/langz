@@ -3,7 +3,7 @@ package builtins
 import (
 	"fmt"
 
-	"github.com/tasnimzotder/langz/ast"
+	"github.com/tasnimzotder/langz/internal/ast"
 )
 
 var exprBuiltins = map[string]builtinHandler{

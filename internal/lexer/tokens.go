@@ -22,6 +22,7 @@ const (
 	MINUS      TokenType = "MINUS"      // -
 	STAR       TokenType = "STAR"       // *
 	SLASH      TokenType = "SLASH"      // /
+	PERCENT    TokenType = "PERCENT"    // %
 	LPAREN     TokenType = "LPAREN"     // (
 	RPAREN     TokenType = "RPAREN"     // )
 	LBRACE     TokenType = "LBRACE"     // {

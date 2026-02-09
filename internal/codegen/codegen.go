@@ -3,7 +3,7 @@ package codegen
 import (
 	"strings"
 
-	"github.com/tasnimzotder/langz/ast"
+	"github.com/tasnimzotder/langz/internal/ast"
 )
 
 // Generator holds state for Bash code generation.

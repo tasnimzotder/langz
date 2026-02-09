@@ -3,8 +3,8 @@ package parser
 import (
 	"fmt"
 
-	"github.com/tasnimzotder/langz/ast"
-	"github.com/tasnimzotder/langz/lexer"
+	"github.com/tasnimzotder/langz/internal/ast"
+	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
 // Parser converts a token stream into an AST.

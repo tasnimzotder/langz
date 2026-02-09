@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tasnimzotder/langz/lexer"
-	"github.com/tasnimzotder/langz/parser"
+	"github.com/tasnimzotder/langz/internal/lexer"
+	"github.com/tasnimzotder/langz/internal/parser"
 )
 
 func compile(input string) string {
@@ -401,4 +401,29 @@ func TestLowerBuiltin(t *testing.T) {
 	output := body(compile(`x = lower("HELLO")`))
 
 	assert.Contains(t, output, `x=$(echo "HELLO" | tr '[:upper:]' '[:lower:]')`)
+}
+
+func TestModuloExpression(t *testing.T) {
+	output := body(compile(`result = a % b`))
+
+	assert.Contains(t, output, `result=$((a % b))`)
+}
+
+func TestOperatorPrecedence(t *testing.T) {
+	// a + b * c should generate $((a + b * c)) with correct nesting
+	output := body(compile(`result = a + b * c`))
+
+	assert.Contains(t, output, `result=$((a + b * c))`)
+}
+
+func TestParenthesizedExprCodegen(t *testing.T) {
+	output := body(compile(`result = (a + b) * c`))
+
+	assert.Contains(t, output, `result=$(((a + b) * c))`)
+}
+
+func TestComplexArithmetic(t *testing.T) {
+	output := body(compile(`result = a * b + c * d`))
+
+	assert.Contains(t, output, `result=$((a * b + c * d))`)
 }

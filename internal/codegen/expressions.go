@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tasnimzotder/langz/ast"
-	"github.com/tasnimzotder/langz/codegen/builtins"
+	"github.com/tasnimzotder/langz/internal/ast"
+	"github.com/tasnimzotder/langz/internal/codegen/builtins"
 )
 
 var interpRegex = regexp.MustCompile(`\{(\w+)\}`)
@@ -36,7 +36,8 @@ func (g *Generator) genExpr(node ast.Node) string {
 		return fmt.Sprintf("%s.%s", obj, n.Field)
 	case *ast.BinaryExpr:
 		if isArithmeticOp(n.Op) {
-			return fmt.Sprintf("$((%s %s %s))", g.genArithOperand(n.Left), n.Op, g.genArithOperand(n.Right))
+			prec := arithPrecedence(n.Op)
+			return fmt.Sprintf("$((%s %s %s))", g.genArithOperandPrec(n.Left, prec), n.Op, g.genArithOperandPrec(n.Right, prec))
 		}
 		return fmt.Sprintf("%s %s %s", g.genExpr(n.Left), n.Op, g.genExpr(n.Right))
 	case *ast.UnaryExpr:
@@ -144,6 +145,12 @@ func (g *Generator) genMapLiteral(m *ast.MapLiteral) string {
 
 // genArithOperand produces unquoted values suitable for Bash $((...)).
 func (g *Generator) genArithOperand(node ast.Node) string {
+	return g.genArithOperandPrec(node, 0)
+}
+
+// genArithOperandPrec adds parentheses when a lower-precedence op is nested
+// inside a higher-precedence context (e.g., (a + b) * c).
+func (g *Generator) genArithOperandPrec(node ast.Node, parentPrec int) string {
 	switch n := node.(type) {
 	case *ast.Identifier:
 		return n.Name
@@ -151,7 +158,12 @@ func (g *Generator) genArithOperand(node ast.Node) string {
 		return n.Value
 	case *ast.BinaryExpr:
 		if isArithmeticOp(n.Op) {
-			return fmt.Sprintf("%s %s %s", g.genArithOperand(n.Left), n.Op, g.genArithOperand(n.Right))
+			prec := arithPrecedence(n.Op)
+			inner := fmt.Sprintf("%s %s %s", g.genArithOperandPrec(n.Left, prec), n.Op, g.genArithOperandPrec(n.Right, prec))
+			if parentPrec > prec {
+				return fmt.Sprintf("(%s)", inner)
+			}
+			return inner
 		}
 		return g.genExpr(node)
 	default:
@@ -159,8 +171,19 @@ func (g *Generator) genArithOperand(node ast.Node) string {
 	}
 }
 
+func arithPrecedence(op string) int {
+	switch op {
+	case "+", "-":
+		return 1
+	case "*", "/", "%":
+		return 2
+	default:
+		return 0
+	}
+}
+
 func isArithmeticOp(op string) bool {
-	return op == "+" || op == "-" || op == "*" || op == "/"
+	return op == "+" || op == "-" || op == "*" || op == "/" || op == "%"
 }
 
 func bashCompareOp(op string) string {
