@@ -197,6 +197,105 @@ func TestDotAccess(t *testing.T) {
 	assert.Equal(t, "f", obj.Name)
 }
 
+func TestOrWithBlock(t *testing.T) {
+	prog := parse(`x = exec("cmd") or { print("failed") "fallback" }`)
+
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	orExpr, ok := assign.Value.(*ast.OrExpr)
+	require.True(t, ok, "expected OrExpr")
+
+	block, ok := orExpr.Fallback.(*ast.BlockExpr)
+	require.True(t, ok, "expected BlockExpr fallback")
+	require.Len(t, block.Statements, 2)
+
+	call, ok := block.Statements[0].(*ast.FuncCall)
+	require.True(t, ok, "expected FuncCall in block")
+	assert.Equal(t, "print", call.Name)
+
+	str, ok := block.Statements[1].(*ast.StringLiteral)
+	require.True(t, ok, "expected StringLiteral as last expr")
+	assert.Equal(t, "fallback", str.Value)
+}
+
+func TestOrWithExitShortcut(t *testing.T) {
+	prog := parse(`data = read("file") or exit(1)`)
+
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	orExpr, ok := assign.Value.(*ast.OrExpr)
+	require.True(t, ok, "expected OrExpr")
+
+	call, ok := orExpr.Fallback.(*ast.FuncCall)
+	require.True(t, ok, "expected FuncCall fallback (exit)")
+	assert.Equal(t, "exit", call.Name)
+}
+
+func TestOrWithContinue(t *testing.T) {
+	prog := parse(`content = read(f) or continue`)
+
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	orExpr, ok := assign.Value.(*ast.OrExpr)
+	require.True(t, ok, "expected OrExpr")
+
+	_, ok = orExpr.Fallback.(*ast.ContinueStmt)
+	require.True(t, ok, "expected ContinueStmt fallback")
+}
+
+func TestMatchStatement(t *testing.T) {
+	input := `match platform {
+		"darwin" => print("macOS")
+		"linux" => print("Linux")
+		_ => print("unknown")
+	}`
+	prog := parse(input)
+
+	require.Len(t, prog.Statements, 1)
+	m, ok := prog.Statements[0].(*ast.MatchStmt)
+	require.True(t, ok, "expected MatchStmt")
+
+	ident, ok := m.Expr.(*ast.Identifier)
+	require.True(t, ok, "expected Identifier")
+	assert.Equal(t, "platform", ident.Name)
+
+	require.Len(t, m.Cases, 3)
+
+	// First case: "darwin"
+	pattern0, ok := m.Cases[0].Pattern.(*ast.StringLiteral)
+	require.True(t, ok, "expected StringLiteral pattern")
+	assert.Equal(t, "darwin", pattern0.Value)
+	require.Len(t, m.Cases[0].Body, 1)
+
+	// Wildcard case
+	assert.Nil(t, m.Cases[2].Pattern, "wildcard _ should be nil")
+	require.Len(t, m.Cases[2].Body, 1)
+}
+
+func TestParseErrorMessage(t *testing.T) {
+	tokens := lexer.New("x = \n+ 1").Tokenize()
+	p := New(tokens)
+	prog, err := p.ParseWithErrors()
+
+	// Should have errors because + is not a valid expression start
+	assert.NotNil(t, prog, "should return partial program even with errors")
+	if err != nil {
+		assert.Contains(t, err.Error(), "line")
+	}
+}
+
+func TestParseErrorUnexpectedToken(t *testing.T) {
+	tokens := lexer.New("fn (").Tokenize()
+	p := New(tokens)
+	_, err := p.ParseWithErrors()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "expected IDENT")
+}
+
 func TestNegation(t *testing.T) {
 	prog := parse(`if !ok { print("fail") }`)
 

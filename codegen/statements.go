@@ -20,6 +20,8 @@ func (g *Generator) genStatement(node ast.Node) {
 		g.genIf(n)
 	case *ast.ForStmt:
 		g.genFor(n)
+	case *ast.MatchStmt:
+		g.genMatch(n)
 	case *ast.ReturnStmt:
 		g.genReturn(n)
 	case *ast.ContinueStmt:
@@ -28,9 +30,67 @@ func (g *Generator) genStatement(node ast.Node) {
 }
 
 func (g *Generator) genAssignment(a *ast.Assignment) {
+	orExpr, isOr := a.Value.(*ast.OrExpr)
+	if isOr {
+		g.genOrAssignment(a.Name, orExpr)
+		return
+	}
 	g.writeIndent()
 	value := g.genExpr(a.Value)
 	g.write(fmt.Sprintf("%s=%s\n", a.Name, value))
+}
+
+func (g *Generator) genOrAssignment(name string, or *ast.OrExpr) {
+	// Special case: env("VAR") or "default" -> var="${VAR:-default}"
+	if call, ok := or.Expr.(*ast.FuncCall); ok && call.Name == "env" {
+		if strVal, ok := or.Fallback.(*ast.StringLiteral); ok {
+			envName := g.genRawValue(call.Args[0])
+			g.writeln(fmt.Sprintf(`%s="${%s:-%s}"`, name, envName, interpolate(strVal.Value)))
+			return
+		}
+	}
+
+	// General case: if name=$(expr 2>/dev/null); then true; else fallback; fi
+	expr := g.genExpr(or.Expr)
+	g.writeln(fmt.Sprintf("if %s=$(%s 2>/dev/null); then", name, stripSubshell(expr)))
+	g.indent++
+	g.writeln("true")
+	g.indent--
+	g.writeln("else")
+	g.genOrFallback(name, or.Fallback)
+	g.writeln("fi")
+}
+
+func stripSubshell(s string) string {
+	// Remove $() wrapper if present
+	if len(s) >= 3 && s[0] == '$' && s[1] == '(' && s[len(s)-1] == ')' {
+		return s[2 : len(s)-1]
+	}
+	return s
+}
+
+func (g *Generator) genOrFallback(name string, fallback ast.Node) {
+	switch n := fallback.(type) {
+	case *ast.BlockExpr:
+		g.genBlock(n.Statements)
+	case *ast.ContinueStmt:
+		g.indent++
+		g.writeln("continue")
+		g.indent--
+	case *ast.FuncCall:
+		g.indent++
+		g.genFuncCallStmt(n)
+		g.indent--
+	case *ast.ReturnStmt:
+		g.indent++
+		g.genReturn(n)
+		g.indent--
+	default:
+		g.indent++
+		g.writeIndent()
+		g.write(fmt.Sprintf("%s=%s\n", name, g.genExpr(fallback)))
+		g.indent--
+	}
 }
 
 func (g *Generator) genFuncCallStmt(f *ast.FuncCall) {
@@ -81,6 +141,29 @@ func (g *Generator) genFor(f *ast.ForStmt) {
 	g.writeln(fmt.Sprintf("for %s in %s; do", f.Var, collection))
 	g.genBlock(f.Body)
 	g.writeln("done")
+}
+
+func (g *Generator) genMatch(m *ast.MatchStmt) {
+	expr := g.genConditionOperand(m.Expr)
+	g.writeln(fmt.Sprintf("case %s in", expr))
+	g.indent++
+
+	for _, c := range m.Cases {
+		if c.Pattern == nil {
+			g.writeln("*)")
+		} else {
+			g.writeln(fmt.Sprintf("%s)", g.genRawValue(c.Pattern)))
+		}
+		g.indent++
+		for _, stmt := range c.Body {
+			g.genStatement(stmt)
+		}
+		g.writeln(";;")
+		g.indent--
+	}
+
+	g.indent--
+	g.writeln("esac")
 }
 
 func (g *Generator) genReturn(r *ast.ReturnStmt) {

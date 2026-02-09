@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/tasnimzotder/langz/ast"
 	"github.com/tasnimzotder/langz/lexer"
 )
@@ -9,6 +11,7 @@ type Parser struct {
 	tokens  []lexer.Token
 	pos     int
 	current lexer.Token
+	errors  []string
 }
 
 func New(tokens []lexer.Token) *Parser {
@@ -33,16 +36,31 @@ func (p *Parser) peek() lexer.Token {
 	return lexer.Token{Type: lexer.EOF}
 }
 
+func (p *Parser) addError(msg string) {
+	p.errors = append(p.errors, fmt.Sprintf("line %d, col %d: %s", p.current.Line, p.current.Col, msg))
+}
+
 func (p *Parser) expect(t lexer.TokenType) lexer.Token {
 	if p.current.Type != t {
-		panic("expected " + string(t) + ", got " + string(p.current.Type))
+		p.addError(fmt.Sprintf("expected %s, got %s", t, p.current.Type))
+		return lexer.Token{Type: t}
 	}
 	tok := p.current
 	p.advance()
 	return tok
 }
 
+// Parse parses tokens into a program. Panics on errors (legacy).
 func (p *Parser) Parse() *ast.Program {
+	prog, err := p.ParseWithErrors()
+	if err != nil {
+		panic(err.Error())
+	}
+	return prog
+}
+
+// ParseWithErrors parses tokens and returns errors instead of panicking.
+func (p *Parser) ParseWithErrors() (*ast.Program, error) {
 	prog := &ast.Program{}
 
 	for p.current.Type != lexer.EOF {
@@ -52,7 +70,10 @@ func (p *Parser) Parse() *ast.Program {
 		}
 	}
 
-	return prog
+	if len(p.errors) > 0 {
+		return prog, fmt.Errorf("%s", p.errors[0])
+	}
+	return prog, nil
 }
 
 func (p *Parser) parseStatement() ast.Node {
@@ -61,6 +82,8 @@ func (p *Parser) parseStatement() ast.Node {
 		return p.parseIf()
 	case lexer.FOR:
 		return p.parseFor()
+	case lexer.MATCH:
+		return p.parseMatch()
 	case lexer.FN:
 		return p.parseFuncDecl()
 	case lexer.RETURN:
@@ -76,6 +99,8 @@ func (p *Parser) parseStatement() ast.Node {
 			return p.parseFuncCall()
 		}
 		return p.parseExpression()
+	case lexer.STRING, lexer.INT, lexer.TRUE, lexer.FALSE, lexer.BANG:
+		return p.parseExpression()
 	default:
 		p.advance()
 		return nil
@@ -90,7 +115,7 @@ func (p *Parser) parseAssignment() *ast.Assignment {
 
 	if p.current.Type == lexer.OR {
 		p.advance()
-		fallback := p.parseExpression()
+		fallback := p.parseOrFallback()
 		value = &ast.OrExpr{Expr: value, Fallback: fallback}
 	}
 
@@ -251,6 +276,76 @@ func (p *Parser) parseFuncDecl() *ast.FuncDecl {
 		ReturnType: returnType,
 		Body:       body,
 	}
+}
+
+func (p *Parser) parseOrFallback() ast.Node {
+	// or { block }
+	if p.current.Type == lexer.LBRACE {
+		stmts := p.parseBlock()
+		return &ast.BlockExpr{Statements: stmts}
+	}
+
+	// or continue
+	if p.current.Type == lexer.CONTINUE {
+		p.advance()
+		return &ast.ContinueStmt{}
+	}
+
+	// or return expr
+	if p.current.Type == lexer.RETURN {
+		return p.parseReturn()
+	}
+
+	// or expr (value or func call like exit(1))
+	return p.parseExpression()
+}
+
+func (p *Parser) parseMatch() *ast.MatchStmt {
+	p.expect(lexer.MATCH)
+
+	expr := p.parseExpression()
+	p.expect(lexer.LBRACE)
+
+	var cases []ast.MatchCase
+	for p.current.Type != lexer.RBRACE && p.current.Type != lexer.EOF {
+		var pattern ast.Node
+
+		if p.current.Type == lexer.UNDERSCORE {
+			// Wildcard: _ => ...
+			p.advance()
+			pattern = nil
+		} else {
+			pattern = p.parseExpression()
+		}
+
+		p.expect(lexer.FATARROW)
+
+		// Collect body statements until the next pattern, wildcard, or closing brace
+		var body []ast.Node
+		for p.current.Type != lexer.RBRACE &&
+			p.current.Type != lexer.UNDERSCORE &&
+			p.current.Type != lexer.FATARROW &&
+			p.current.Type != lexer.EOF {
+
+			// Peek ahead to see if this is the start of a new case
+			if (p.current.Type == lexer.STRING || p.current.Type == lexer.INT ||
+				p.current.Type == lexer.TRUE || p.current.Type == lexer.FALSE) &&
+				p.peek().Type == lexer.FATARROW {
+				break
+			}
+
+			stmt := p.parseStatement()
+			if stmt != nil {
+				body = append(body, stmt)
+			}
+		}
+
+		cases = append(cases, ast.MatchCase{Pattern: pattern, Body: body})
+	}
+
+	p.expect(lexer.RBRACE)
+
+	return &ast.MatchStmt{Expr: expr, Cases: cases}
 }
 
 func (p *Parser) parseReturn() *ast.ReturnStmt {

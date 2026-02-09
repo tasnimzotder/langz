@@ -169,3 +169,19 @@ func TestDotAccess(t *testing.T) {
 		{Type: IDENT, Value: "name"},
 	})
 }
+
+func TestTokenPositions(t *testing.T) {
+	tokens := New("x = 1\ny = 2").Tokenize()
+
+	// x is at line 1, col 1
+	assert.Equal(t, 1, tokens[0].Line, "x line")
+	assert.Equal(t, 1, tokens[0].Col, "x col")
+
+	// 1 is at line 1, col 5
+	assert.Equal(t, 1, tokens[2].Line, "1 line")
+	assert.Equal(t, 5, tokens[2].Col, "1 col")
+
+	// y is at line 2, col 1
+	assert.Equal(t, 2, tokens[3].Line, "y line")
+	assert.Equal(t, 1, tokens[3].Col, "y col")
+}

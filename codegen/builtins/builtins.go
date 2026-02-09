@@ -107,4 +107,7 @@ var exprBuiltins = map[string]builtinHandler{
 	"exists": func(args []ast.Node, genExpr ExprGen, _ RawValueGen) string {
 		return fmt.Sprintf("[ -e %s ]", genExpr(args[0]))
 	},
+	"fetch": func(args []ast.Node, genExpr ExprGen, _ RawValueGen) string {
+		return fmt.Sprintf("$(curl -sf %s)", genExpr(args[0]))
+	},
 }

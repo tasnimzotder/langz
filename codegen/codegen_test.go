@@ -185,3 +185,52 @@ func TestExitBuiltin(t *testing.T) {
 
 	assert.Contains(t, output, "exit 1")
 }
+
+func TestOrWithValue(t *testing.T) {
+	output := body(compile(`name = env("APP") or "default"`))
+
+	assert.Contains(t, output, `name="${APP:-default}"`)
+}
+
+func TestOrWithExitCodegen(t *testing.T) {
+	output := body(compile(`data = read("f.txt") or exit(1)`))
+
+	assert.Contains(t, output, `cat "f.txt"`)
+	assert.Contains(t, output, "exit 1")
+}
+
+func TestOrWithBlockCodegen(t *testing.T) {
+	output := body(compile(`x = exec("cmd") or { print("failed") "fallback" }`))
+
+	assert.Contains(t, output, "cmd")
+	assert.Contains(t, output, `echo "failed"`)
+}
+
+func TestMatchCodegen(t *testing.T) {
+	input := `match platform {
+		"darwin" => print("macOS")
+		"linux" => print("Linux")
+		_ => print("unknown")
+	}`
+	output := body(compile(input))
+
+	assert.Contains(t, output, `case "$platform" in`)
+	assert.Contains(t, output, `darwin)`)
+	assert.Contains(t, output, `echo "macOS"`)
+	assert.Contains(t, output, `;;`)
+	assert.Contains(t, output, `linux)`)
+	assert.Contains(t, output, `*)`)
+	assert.Contains(t, output, `esac`)
+}
+
+func TestFetchBuiltin(t *testing.T) {
+	output := body(compile(`res = fetch("https://api.example.com/health")`))
+
+	assert.Contains(t, output, `curl -sf "https://api.example.com/health"`)
+}
+
+func TestOrWithContinueCodegen(t *testing.T) {
+	output := body(compile(`content = read(f) or continue`))
+
+	assert.Contains(t, output, "continue")
+}

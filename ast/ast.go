@@ -142,6 +142,13 @@ type ExitCall struct {
 
 func (e *ExitCall) nodeType() string { return "ExitCall" }
 
+// BlockExpr: { stmts... lastExpr } — used in `or { ... }` blocks
+type BlockExpr struct {
+	Statements []Node
+}
+
+func (b *BlockExpr) nodeType() string { return "BlockExpr" }
+
 // MatchStmt: match expr { cases }
 type MatchStmt struct {
 	Expr  Node

@@ -28,7 +28,11 @@ func main() {
 	}
 
 	tokens := lexer.New(string(source)).Tokenize()
-	prog := parser.New(tokens).Parse()
+	prog, parseErr := parser.New(tokens).ParseWithErrors()
+	if parseErr != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", inputFile, parseErr)
+		os.Exit(1)
+	}
 	output := codegen.Generate(prog)
 
 	switch command {
