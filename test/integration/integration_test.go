@@ -423,11 +423,13 @@ match action {
 }
 `
 	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
 
-	// Verify the generated code structure
-	assert.Contains(t, bash, `case "$action" in`)
-	assert.Contains(t, bash, "build)")
-	assert.Contains(t, bash, "esac")
+	assert.Equal(t, 0, code)
+	lines := strings.Split(output, "\n")
+	require.Len(t, lines, 2)
+	assert.Equal(t, "compiling", lines[0])
+	assert.Equal(t, "linking", lines[1])
 }
 
 func TestE2E_FileWorkflow(t *testing.T) {

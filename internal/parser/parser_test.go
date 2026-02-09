@@ -498,6 +498,41 @@ func TestNestedArithmetic(t *testing.T) {
 	assert.Equal(t, "*", rightMul.Op)
 }
 
+func TestMatchWithBlockArm(t *testing.T) {
+	input := `match action {
+		"test" => print("testing")
+		"build" => {
+			print("compiling")
+			print("linking")
+		}
+		_ => print("unknown")
+	}`
+	prog := parse(input)
+
+	require.Len(t, prog.Statements, 1)
+	m, ok := prog.Statements[0].(*ast.MatchStmt)
+	require.True(t, ok, "expected MatchStmt")
+	require.Len(t, m.Cases, 3)
+
+	// Single-statement arm
+	p0, ok := m.Cases[0].Pattern.(*ast.StringLiteral)
+	require.True(t, ok)
+	assert.Equal(t, "test", p0.Value)
+	assert.Len(t, m.Cases[0].Body, 1)
+
+	// Block arm with two statements
+	p1, ok := m.Cases[1].Pattern.(*ast.StringLiteral)
+	require.True(t, ok)
+	assert.Equal(t, "build", p1.Value)
+	require.Len(t, m.Cases[1].Body, 2)
+	assert.IsType(t, &ast.FuncCall{}, m.Cases[1].Body[0])
+	assert.IsType(t, &ast.FuncCall{}, m.Cases[1].Body[1])
+
+	// Wildcard arm
+	assert.Nil(t, m.Cases[2].Pattern)
+	assert.Len(t, m.Cases[2].Body, 1)
+}
+
 func TestArithmeticWithComparison(t *testing.T) {
 	// if a + b > c * d — comparison should be at top, arithmetic deeper
 	prog := parse(`if a + b > c * d { print("yes") }`)

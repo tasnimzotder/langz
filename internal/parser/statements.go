@@ -162,23 +162,28 @@ func (p *Parser) parseMatch() *ast.MatchStmt {
 
 		p.expect(lexer.FATARROW)
 
-		// Collect body statements until the next pattern, wildcard, or closing brace
 		var body []ast.Node
-		for p.current.Type != lexer.RBRACE &&
-			p.current.Type != lexer.UNDERSCORE &&
-			p.current.Type != lexer.FATARROW &&
-			p.current.Type != lexer.EOF {
+		if p.current.Type == lexer.LBRACE {
+			// Block arm: { stmt; stmt; ... }
+			body = p.parseBlock()
+		} else {
+			// Single-statement arm: collect until next pattern or closing brace
+			for p.current.Type != lexer.RBRACE &&
+				p.current.Type != lexer.UNDERSCORE &&
+				p.current.Type != lexer.FATARROW &&
+				p.current.Type != lexer.EOF {
 
-			// Peek ahead to see if this is the start of a new case
-			if (p.current.Type == lexer.STRING || p.current.Type == lexer.INT ||
-				p.current.Type == lexer.TRUE || p.current.Type == lexer.FALSE) &&
-				p.peek().Type == lexer.FATARROW {
-				break
-			}
+				// Peek ahead to see if this is the start of a new case
+				if (p.current.Type == lexer.STRING || p.current.Type == lexer.INT ||
+					p.current.Type == lexer.TRUE || p.current.Type == lexer.FALSE) &&
+					p.peek().Type == lexer.FATARROW {
+					break
+				}
 
-			stmt := p.parseStatement()
-			if stmt != nil {
-				body = append(body, stmt)
+				stmt := p.parseStatement()
+				if stmt != nil {
+					body = append(body, stmt)
+				}
 			}
 		}
 
