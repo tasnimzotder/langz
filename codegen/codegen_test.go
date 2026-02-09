@@ -95,3 +95,93 @@ func TestContinueStatement(t *testing.T) {
 
 	assert.Equal(t, "continue", output)
 }
+
+func TestStringInterpolation(t *testing.T) {
+	output := body(compile(`print("Hello {name}")`))
+
+	assert.Equal(t, `echo "Hello ${name}"`, output)
+}
+
+func TestStringInterpolationMultiple(t *testing.T) {
+	output := body(compile(`print("Deploying {app} to {target}")`))
+
+	assert.Equal(t, `echo "Deploying ${app} to ${target}"`, output)
+}
+
+func TestStringNoInterpolation(t *testing.T) {
+	output := body(compile(`print("no vars here")`))
+
+	assert.Equal(t, `echo "no vars here"`, output)
+}
+
+func TestExecBuiltin(t *testing.T) {
+	output := body(compile(`result = exec("ls -la")`))
+
+	assert.Contains(t, output, `result=$(ls -la)`)
+}
+
+func TestEnvBuiltin(t *testing.T) {
+	output := body(compile(`home = env("HOME")`))
+
+	assert.Contains(t, output, `home="${HOME}"`)
+}
+
+func TestExistsBuiltin(t *testing.T) {
+	output := body(compile(`if exists("file.txt") { print("found") }`))
+
+	assert.Contains(t, output, `[ -e "file.txt" ]`)
+}
+
+func TestReadBuiltin(t *testing.T) {
+	output := body(compile(`content = read("file.txt")`))
+
+	assert.Contains(t, output, `content=$(cat "file.txt")`)
+}
+
+func TestWriteBuiltin(t *testing.T) {
+	output := body(compile(`write("out.txt", "hello")`))
+
+	assert.Contains(t, output, `echo "hello" > "out.txt"`)
+}
+
+func TestRmBuiltin(t *testing.T) {
+	output := body(compile(`rm("temp.txt")`))
+
+	assert.Contains(t, output, `rm "temp.txt"`)
+}
+
+func TestMkdirBuiltin(t *testing.T) {
+	output := body(compile(`mkdir("build/output")`))
+
+	assert.Contains(t, output, `mkdir -p "build/output"`)
+}
+
+func TestCopyBuiltin(t *testing.T) {
+	output := body(compile(`copy("a.txt", "b.txt")`))
+
+	assert.Contains(t, output, `cp "a.txt" "b.txt"`)
+}
+
+func TestMoveBuiltin(t *testing.T) {
+	output := body(compile(`move("old.txt", "new.txt")`))
+
+	assert.Contains(t, output, `mv "old.txt" "new.txt"`)
+}
+
+func TestChmodBuiltin(t *testing.T) {
+	output := body(compile(`chmod("script.sh", "755")`))
+
+	assert.Contains(t, output, `chmod 755 "script.sh"`)
+}
+
+func TestGlobBuiltin(t *testing.T) {
+	output := body(compile(`files = glob("*.log")`))
+
+	assert.Contains(t, output, `files=(*.log)`)
+}
+
+func TestExitBuiltin(t *testing.T) {
+	output := body(compile(`exit(1)`))
+
+	assert.Contains(t, output, "exit 1")
+}

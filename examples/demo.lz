@@ -1,0 +1,17 @@
+app = "myapp"
+version = "1.0"
+
+fn greet(name: str) {
+    print("Hello {name} from {app} v{version}")
+}
+
+greet("world")
+
+if exists("config.json") {
+    print("Config found")
+} else {
+    print("No config, using defaults")
+}
+
+mkdir("build/output")
+write("build/output/version.txt", version)
