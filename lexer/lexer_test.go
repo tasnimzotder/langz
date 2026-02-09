@@ -1,0 +1,171 @@
+package lexer
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func assertTokens(t *testing.T, input string, expected []Token) {
+	t.Helper()
+	tokens := New(input).Tokenize()
+	expected = append(expected, Token{Type: EOF, Value: ""})
+
+	require.Len(t, tokens, len(expected))
+	for i, tok := range tokens {
+		assert.Equal(t, expected[i].Type, tok.Type, "token[%d] type", i)
+		assert.Equal(t, expected[i].Value, tok.Value, "token[%d] value", i)
+	}
+}
+
+func TestAssignment(t *testing.T) {
+	assertTokens(t, `name = "hello"`, []Token{
+		{Type: IDENT, Value: "name"},
+		{Type: ASSIGN, Value: "="},
+		{Type: STRING, Value: "hello"},
+	})
+}
+
+func TestIntegerLiteral(t *testing.T) {
+	assertTokens(t, `count = 42`, []Token{
+		{Type: IDENT, Value: "count"},
+		{Type: ASSIGN, Value: "="},
+		{Type: INT, Value: "42"},
+	})
+}
+
+func TestKeywords(t *testing.T) {
+	assertTokens(t, `if true { return }`, []Token{
+		{Type: IF, Value: "if"},
+		{Type: TRUE, Value: "true"},
+		{Type: LBRACE, Value: "{"},
+		{Type: RETURN, Value: "return"},
+		{Type: RBRACE, Value: "}"},
+	})
+}
+
+func TestFunctionDeclaration(t *testing.T) {
+	assertTokens(t, `fn greet(name: str) {`, []Token{
+		{Type: FN, Value: "fn"},
+		{Type: IDENT, Value: "greet"},
+		{Type: LPAREN, Value: "("},
+		{Type: IDENT, Value: "name"},
+		{Type: COLON, Value: ":"},
+		{Type: IDENT, Value: "str"},
+		{Type: RPAREN, Value: ")"},
+		{Type: LBRACE, Value: "{"},
+	})
+}
+
+func TestForLoop(t *testing.T) {
+	assertTokens(t, `for f in files {`, []Token{
+		{Type: FOR, Value: "for"},
+		{Type: IDENT, Value: "f"},
+		{Type: IN, Value: "in"},
+		{Type: IDENT, Value: "files"},
+		{Type: LBRACE, Value: "{"},
+	})
+}
+
+func TestComparison(t *testing.T) {
+	assertTokens(t, `if x > 10 {`, []Token{
+		{Type: IF, Value: "if"},
+		{Type: IDENT, Value: "x"},
+		{Type: GT, Value: ">"},
+		{Type: INT, Value: "10"},
+		{Type: LBRACE, Value: "{"},
+	})
+}
+
+func TestOrErrorHandling(t *testing.T) {
+	assertTokens(t, `val = exec("cmd") or "fallback"`, []Token{
+		{Type: IDENT, Value: "val"},
+		{Type: ASSIGN, Value: "="},
+		{Type: IDENT, Value: "exec"},
+		{Type: LPAREN, Value: "("},
+		{Type: STRING, Value: "cmd"},
+		{Type: RPAREN, Value: ")"},
+		{Type: OR, Value: "or"},
+		{Type: STRING, Value: "fallback"},
+	})
+}
+
+func TestNegation(t *testing.T) {
+	assertTokens(t, `if !success {`, []Token{
+		{Type: IF, Value: "if"},
+		{Type: BANG, Value: "!"},
+		{Type: IDENT, Value: "success"},
+		{Type: LBRACE, Value: "{"},
+	})
+}
+
+func TestCommaAndArrow(t *testing.T) {
+	assertTokens(t, `fn add(a: int, b: int) -> int {`, []Token{
+		{Type: FN, Value: "fn"},
+		{Type: IDENT, Value: "add"},
+		{Type: LPAREN, Value: "("},
+		{Type: IDENT, Value: "a"},
+		{Type: COLON, Value: ":"},
+		{Type: IDENT, Value: "int"},
+		{Type: COMMA, Value: ","},
+		{Type: IDENT, Value: "b"},
+		{Type: COLON, Value: ":"},
+		{Type: IDENT, Value: "int"},
+		{Type: RPAREN, Value: ")"},
+		{Type: ARROW, Value: "->"},
+		{Type: IDENT, Value: "int"},
+		{Type: LBRACE, Value: "{"},
+	})
+}
+
+func TestMatchStatement(t *testing.T) {
+	assertTokens(t, `match status { "ok" => print("good") _ => exit(1) }`, []Token{
+		{Type: MATCH, Value: "match"},
+		{Type: IDENT, Value: "status"},
+		{Type: LBRACE, Value: "{"},
+		{Type: STRING, Value: "ok"},
+		{Type: FATARROW, Value: "=>"},
+		{Type: IDENT, Value: "print"},
+		{Type: LPAREN, Value: "("},
+		{Type: STRING, Value: "good"},
+		{Type: RPAREN, Value: ")"},
+		{Type: UNDERSCORE, Value: "_"},
+		{Type: FATARROW, Value: "=>"},
+		{Type: IDENT, Value: "exit"},
+		{Type: LPAREN, Value: "("},
+		{Type: INT, Value: "1"},
+		{Type: RPAREN, Value: ")"},
+		{Type: RBRACE, Value: "}"},
+	})
+}
+
+func TestElseKeyword(t *testing.T) {
+	assertTokens(t, `} else {`, []Token{
+		{Type: RBRACE, Value: "}"},
+		{Type: ELSE, Value: "else"},
+		{Type: LBRACE, Value: "{"},
+	})
+}
+
+func TestContinueBreak(t *testing.T) {
+	assertTokens(t, `continue`, []Token{
+		{Type: CONTINUE, Value: "continue"},
+	})
+}
+
+func TestBooleans(t *testing.T) {
+	assertTokens(t, `x = false`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: FALSE, Value: "false"},
+	})
+}
+
+func TestDotAccess(t *testing.T) {
+	assertTokens(t, `f.name`, []Token{
+		{Type: IDENT, Value: "f"},
+		{Type: DOT, Value: "."},
+		{Type: IDENT, Value: "name"},
+	})
+}
