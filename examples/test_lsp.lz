@@ -1,0 +1,16 @@
+// Test file for LSP
+name = "world"
+print("Hello {name}")
+
+// Hover over these builtins to see docs
+host = hostname()
+platform = os()
+
+// This line has a deliberate error — should show red squiggle
+fn (
+
+// More valid code after the error
+x = 42
+if x > 10 {
+    print("big")
+}

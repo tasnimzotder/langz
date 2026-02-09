@@ -1,9 +1,8 @@
-import { workspace, ExtensionContext } from "vscode";
+import { workspace, ExtensionContext, window } from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
-  TransportKind,
 } from "vscode-languageclient/node";
 
 let client: LanguageClient;
@@ -14,15 +13,13 @@ export function activate(context: ExtensionContext) {
     .get<string>("serverPath", "langz");
 
   const serverOptions: ServerOptions = {
-    run: { command, args: ["lsp"], transport: TransportKind.stdio },
-    debug: { command, args: ["lsp"], transport: TransportKind.stdio },
+    command: command!,
+    args: ["lsp"],
   };
 
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "langz" }],
-    synchronize: {
-      fileEvents: workspace.createFileSystemWatcher("**/*.lz"),
-    },
+    outputChannel: window.createOutputChannel("Langz Language Server"),
   };
 
   client = new LanguageClient(
