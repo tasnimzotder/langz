@@ -26,18 +26,32 @@ func (g *Generator) genStatement(node ast.Node) {
 		g.genReturn(n)
 	case *ast.ContinueStmt:
 		g.writeln("continue")
+	case *ast.BreakStmt:
+		g.writeln("break")
+	case *ast.WhileStmt:
+		g.genWhile(n)
 	}
 }
 
 func (g *Generator) genAssignment(a *ast.Assignment) {
-	orExpr, isOr := a.Value.(*ast.OrExpr)
-	if isOr {
+	if orExpr, ok := a.Value.(*ast.OrExpr); ok {
 		g.genOrAssignment(a.Name, orExpr)
+		return
+	}
+	if mapLit, ok := a.Value.(*ast.MapLiteral); ok {
+		g.genMapAssignment(a.Name, mapLit)
 		return
 	}
 	g.writeIndent()
 	value := g.genExpr(a.Value)
 	g.write(fmt.Sprintf("%s=%s\n", a.Name, value))
+}
+
+func (g *Generator) genMapAssignment(name string, m *ast.MapLiteral) {
+	g.writeln(fmt.Sprintf("declare -A %s", name))
+	for i, key := range m.Keys {
+		g.writeln(fmt.Sprintf("%s[%s]=%s", name, key, g.genExpr(m.Values[i])))
+	}
 }
 
 func (g *Generator) genOrAssignment(name string, or *ast.OrExpr) {
@@ -164,6 +178,12 @@ func (g *Generator) genMatch(m *ast.MatchStmt) {
 
 	g.indent--
 	g.writeln("esac")
+}
+
+func (g *Generator) genWhile(w *ast.WhileStmt) {
+	g.writeln(fmt.Sprintf("while %s; do", g.genCondition(w.Condition)))
+	g.genBlock(w.Body)
+	g.writeln("done")
 }
 
 func (g *Generator) genReturn(r *ast.ReturnStmt) {

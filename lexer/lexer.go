@@ -1,67 +1,6 @@
 package lexer
 
-type TokenType string
-
-const (
-	// Literals
-	IDENT  TokenType = "IDENT"
-	INT    TokenType = "INT"
-	STRING TokenType = "STRING"
-
-	// Operators & punctuation
-	ASSIGN     TokenType = "ASSIGN"     // =
-	GT         TokenType = "GT"         // >
-	BANG       TokenType = "BANG"       // !
-	LPAREN     TokenType = "LPAREN"     // (
-	RPAREN     TokenType = "RPAREN"     // )
-	LBRACE     TokenType = "LBRACE"     // {
-	RBRACE     TokenType = "RBRACE"     // }
-	LBRACKET   TokenType = "LBRACKET"   // [
-	RBRACKET   TokenType = "RBRACKET"   // ]
-	COMMA      TokenType = "COMMA"      // ,
-	COLON      TokenType = "COLON"      // :
-	DOT        TokenType = "DOT"        // .
-	ARROW      TokenType = "ARROW"      // ->
-	FATARROW   TokenType = "FATARROW"   // =>
-	UNDERSCORE TokenType = "UNDERSCORE" // _
-
-	// Keywords
-	IF       TokenType = "IF"
-	ELSE     TokenType = "ELSE"
-	FOR      TokenType = "FOR"
-	IN       TokenType = "IN"
-	FN       TokenType = "FN"
-	RETURN   TokenType = "RETURN"
-	OR       TokenType = "OR"
-	MATCH    TokenType = "MATCH"
-	TRUE     TokenType = "TRUE"
-	FALSE    TokenType = "FALSE"
-	CONTINUE TokenType = "CONTINUE"
-
-	EOF TokenType = "EOF"
-)
-
-var keywords = map[string]TokenType{
-	"if":       IF,
-	"else":     ELSE,
-	"for":      FOR,
-	"in":       IN,
-	"fn":       FN,
-	"return":   RETURN,
-	"or":       OR,
-	"match":    MATCH,
-	"true":     TRUE,
-	"false":    FALSE,
-	"continue": CONTINUE,
-}
-
-type Token struct {
-	Type  TokenType
-	Value string
-	Line  int
-	Col   int
-}
-
+// Lexer tokenizes Langz source code into a stream of tokens.
 type Lexer struct {
 	input   string
 	pos     int
@@ -70,6 +9,7 @@ type Lexer struct {
 	col     int
 }
 
+// New creates a new Lexer for the given input source.
 func New(input string) *Lexer {
 	l := &Lexer{input: input, line: 1, col: 1}
 	if len(input) > 0 {
@@ -104,7 +44,19 @@ func (l *Lexer) peek() byte {
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.pos < len(l.input) && (l.current == ' ' || l.current == '\t' || l.current == '\n' || l.current == '\r') {
+	for l.pos < len(l.input) {
+		if l.current == ' ' || l.current == '\t' || l.current == '\n' || l.current == '\r' {
+			l.advance()
+		} else if l.current == '/' && l.peek() == '/' {
+			l.skipComment()
+		} else {
+			break
+		}
+	}
+}
+
+func (l *Lexer) skipComment() {
+	for l.pos < len(l.input) && l.current != '\n' {
 		l.advance()
 	}
 }
@@ -148,6 +100,7 @@ func isAlphanumeric(ch byte) bool {
 	return isLetter(ch) || isDigit(ch) || ch == '_'
 }
 
+// Tokenize scans the entire input and returns a slice of tokens.
 func (l *Lexer) Tokenize() []Token {
 	var tokens []Token
 
@@ -165,8 +118,19 @@ func (l *Lexer) Tokenize() []Token {
 			if l.peek() == '>' {
 				tokens = append(tokens, l.token(FATARROW, "=>", line, col))
 				l.advance()
+			} else if l.peek() == '=' {
+				tokens = append(tokens, l.token(EQ, "==", line, col))
+				l.advance()
 			} else {
 				tokens = append(tokens, l.token(ASSIGN, "=", line, col))
+			}
+			l.advance()
+		case l.current == '!':
+			if l.peek() == '=' {
+				tokens = append(tokens, l.token(NEQ, "!=", line, col))
+				l.advance()
+			} else {
+				tokens = append(tokens, l.token(BANG, "!", line, col))
 			}
 			l.advance()
 		case l.current == '-' && l.peek() == '>':
@@ -174,10 +138,32 @@ func (l *Lexer) Tokenize() []Token {
 			l.advance()
 			l.advance()
 		case l.current == '>':
-			tokens = append(tokens, l.token(GT, ">", line, col))
+			if l.peek() == '=' {
+				tokens = append(tokens, l.token(GTE, ">=", line, col))
+				l.advance()
+			} else {
+				tokens = append(tokens, l.token(GT, ">", line, col))
+			}
 			l.advance()
-		case l.current == '!':
-			tokens = append(tokens, l.token(BANG, "!", line, col))
+		case l.current == '<':
+			if l.peek() == '=' {
+				tokens = append(tokens, l.token(LTE, "<=", line, col))
+				l.advance()
+			} else {
+				tokens = append(tokens, l.token(LT, "<", line, col))
+			}
+			l.advance()
+		case l.current == '+':
+			tokens = append(tokens, l.token(PLUS, "+", line, col))
+			l.advance()
+		case l.current == '-':
+			tokens = append(tokens, l.token(MINUS, "-", line, col))
+			l.advance()
+		case l.current == '*':
+			tokens = append(tokens, l.token(STAR, "*", line, col))
+			l.advance()
+		case l.current == '/':
+			tokens = append(tokens, l.token(SLASH, "/", line, col))
 			l.advance()
 		case l.current == '(':
 			tokens = append(tokens, l.token(LPAREN, "(", line, col))

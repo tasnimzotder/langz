@@ -1,0 +1,62 @@
+// deploy.lz — A DevOps deployment script in Langz
+// Compile: langz build deploy.lz
+// Run:     langz run deploy.lz
+
+app = "webapp"
+version = "2.1.0"
+
+// Get system info
+platform = os()
+host = hostname()
+user = whoami()
+
+fn log(msg: str) {
+	print("[deploy] {msg}")
+}
+
+log("Starting deployment of {app} v{version}")
+log("Platform: {platform}, Host: {host}, User: {user}")
+
+// Setup build directory
+rmdir("dist")
+mkdir("dist")
+mkdir("dist/assets")
+
+// Write build manifest
+write("dist/manifest.txt", "app={app}")
+append("dist/manifest.txt", "version={version}")
+append("dist/manifest.txt", "built_by={user}")
+
+// Check for config
+if exists("config.json") {
+	log("Config found, copying")
+	copy("config.json", "dist/config.json")
+} else {
+	log("No config, using defaults")
+	write("dist/config.json", "{}")
+}
+
+// Process static files
+assets = ["style.css", "app.js", "index.html"]
+for asset in assets {
+	log("Bundling {asset}")
+}
+
+// Environment-specific settings
+env_name = env("DEPLOY_ENV") or "staging"
+
+match env_name {
+	"production" => log("PRODUCTION deploy")
+	"staging" => log("Staging deploy")
+	_ => log("Unknown environment: {env_name}")
+}
+
+// Verify build output
+if is_dir("dist") {
+	log("Build directory ready")
+} else {
+	log("Build failed!")
+	exit(1)
+}
+
+log("Deployment complete!")

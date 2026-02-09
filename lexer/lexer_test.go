@@ -154,6 +154,72 @@ func TestContinueBreak(t *testing.T) {
 	})
 }
 
+func TestAllComparisonOperators(t *testing.T) {
+	assertTokens(t, `a == b`, []Token{
+		{Type: IDENT, Value: "a"},
+		{Type: EQ, Value: "=="},
+		{Type: IDENT, Value: "b"},
+	})
+	assertTokens(t, `a != b`, []Token{
+		{Type: IDENT, Value: "a"},
+		{Type: NEQ, Value: "!="},
+		{Type: IDENT, Value: "b"},
+	})
+	assertTokens(t, `a < b`, []Token{
+		{Type: IDENT, Value: "a"},
+		{Type: LT, Value: "<"},
+		{Type: IDENT, Value: "b"},
+	})
+	assertTokens(t, `a >= b`, []Token{
+		{Type: IDENT, Value: "a"},
+		{Type: GTE, Value: ">="},
+		{Type: IDENT, Value: "b"},
+	})
+	assertTokens(t, `a <= b`, []Token{
+		{Type: IDENT, Value: "a"},
+		{Type: LTE, Value: "<="},
+		{Type: IDENT, Value: "b"},
+	})
+}
+
+func TestArithmeticOperators(t *testing.T) {
+	assertTokens(t, `a + b - c * d / e`, []Token{
+		{Type: IDENT, Value: "a"},
+		{Type: PLUS, Value: "+"},
+		{Type: IDENT, Value: "b"},
+		{Type: MINUS, Value: "-"},
+		{Type: IDENT, Value: "c"},
+		{Type: STAR, Value: "*"},
+		{Type: IDENT, Value: "d"},
+		{Type: SLASH, Value: "/"},
+		{Type: IDENT, Value: "e"},
+	})
+}
+
+func TestWhileAndBreak(t *testing.T) {
+	assertTokens(t, `while x > 0 { break }`, []Token{
+		{Type: WHILE, Value: "while"},
+		{Type: IDENT, Value: "x"},
+		{Type: GT, Value: ">"},
+		{Type: INT, Value: "0"},
+		{Type: LBRACE, Value: "{"},
+		{Type: BREAK, Value: "break"},
+		{Type: RBRACE, Value: "}"},
+	})
+}
+
+func TestAndOrKeywords(t *testing.T) {
+	assertTokens(t, `if a and b or c {`, []Token{
+		{Type: IF, Value: "if"},
+		{Type: IDENT, Value: "a"},
+		{Type: AND, Value: "and"},
+		{Type: IDENT, Value: "b"},
+		{Type: OR, Value: "or"},
+		{Type: IDENT, Value: "c"},
+		{Type: LBRACE, Value: "{"},
+	})
+}
+
 func TestBooleans(t *testing.T) {
 	assertTokens(t, `x = false`, []Token{
 		{Type: IDENT, Value: "x"},
@@ -168,6 +234,21 @@ func TestDotAccess(t *testing.T) {
 		{Type: DOT, Value: "."},
 		{Type: IDENT, Value: "name"},
 	})
+}
+
+func TestSingleLineComment(t *testing.T) {
+	assertTokens(t, "x = 1 // this is a comment\ny = 2", []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: INT, Value: "1"},
+		{Type: IDENT, Value: "y"},
+		{Type: ASSIGN, Value: "="},
+		{Type: INT, Value: "2"},
+	})
+}
+
+func TestCommentOnlyLine(t *testing.T) {
+	assertTokens(t, "// just a comment", []Token{})
 }
 
 func TestTokenPositions(t *testing.T) {

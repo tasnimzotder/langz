@@ -296,6 +296,48 @@ func TestParseErrorUnexpectedToken(t *testing.T) {
 	assert.Contains(t, err.Error(), "expected IDENT")
 }
 
+func TestListLiteral(t *testing.T) {
+	prog := parse(`items = ["a", "b", "c"]`)
+
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	list, ok := assign.Value.(*ast.ListLiteral)
+	require.True(t, ok, "expected ListLiteral")
+	require.Len(t, list.Elements, 3)
+
+	assert.Equal(t, "a", list.Elements[0].(*ast.StringLiteral).Value)
+	assert.Equal(t, "b", list.Elements[1].(*ast.StringLiteral).Value)
+	assert.Equal(t, "c", list.Elements[2].(*ast.StringLiteral).Value)
+}
+
+func TestEmptyList(t *testing.T) {
+	prog := parse(`items = []`)
+
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	list, ok := assign.Value.(*ast.ListLiteral)
+	require.True(t, ok, "expected ListLiteral")
+	assert.Len(t, list.Elements, 0)
+}
+
+func TestMapLiteral(t *testing.T) {
+	prog := parse(`config = {port: 8080, host: "localhost"}`)
+
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+
+	m, ok := assign.Value.(*ast.MapLiteral)
+	require.True(t, ok, "expected MapLiteral")
+	require.Len(t, m.Keys, 2)
+
+	assert.Equal(t, "port", m.Keys[0])
+	assert.Equal(t, "8080", m.Values[0].(*ast.IntLiteral).Value)
+	assert.Equal(t, "host", m.Keys[1])
+	assert.Equal(t, "localhost", m.Values[1].(*ast.StringLiteral).Value)
+}
+
 func TestNegation(t *testing.T) {
 	prog := parse(`if !ok { print("fail") }`)
 
@@ -305,4 +347,66 @@ func TestNegation(t *testing.T) {
 	unary, ok := ifStmt.Condition.(*ast.UnaryExpr)
 	require.True(t, ok, "expected UnaryExpr")
 	assert.Equal(t, "!", unary.Op)
+}
+
+func TestComparisonOperators(t *testing.T) {
+	tests := []struct {
+		input string
+		op    string
+	}{
+		{`if x == 10 { print("eq") }`, "=="},
+		{`if x != 10 { print("ne") }`, "!="},
+		{`if x < 10 { print("lt") }`, "<"},
+		{`if x >= 10 { print("ge") }`, ">="},
+		{`if x <= 10 { print("le") }`, "<="},
+		{`if x > 10 { print("gt") }`, ">"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.op, func(t *testing.T) {
+			prog := parse(tt.input)
+			require.Len(t, prog.Statements, 1)
+			ifStmt := prog.Statements[0].(*ast.IfStmt)
+			cond, ok := ifStmt.Condition.(*ast.BinaryExpr)
+			require.True(t, ok, "expected BinaryExpr")
+			assert.Equal(t, tt.op, cond.Op)
+		})
+	}
+}
+
+func TestArithmeticExpression(t *testing.T) {
+	prog := parse(`x = a + b`)
+	require.Len(t, prog.Statements, 1)
+	assign := prog.Statements[0].(*ast.Assignment)
+	bin, ok := assign.Value.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, "+", bin.Op)
+}
+
+func TestWhileLoop(t *testing.T) {
+	prog := parse(`while x > 0 { print(x) }`)
+	require.Len(t, prog.Statements, 1)
+	ws, ok := prog.Statements[0].(*ast.WhileStmt)
+	require.True(t, ok, "expected WhileStmt")
+
+	cond, ok := ws.Condition.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr condition")
+	assert.Equal(t, ">", cond.Op)
+	require.Len(t, ws.Body, 1)
+}
+
+func TestBreakStatement(t *testing.T) {
+	prog := parse(`break`)
+	require.Len(t, prog.Statements, 1)
+	_, ok := prog.Statements[0].(*ast.BreakStmt)
+	require.True(t, ok, "expected BreakStmt")
+}
+
+func TestLogicalAnd(t *testing.T) {
+	prog := parse(`if a and b { print("both") }`)
+	require.Len(t, prog.Statements, 1)
+	ifStmt := prog.Statements[0].(*ast.IfStmt)
+	bin, ok := ifStmt.Condition.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, "and", bin.Op)
 }

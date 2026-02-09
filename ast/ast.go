@@ -142,6 +142,21 @@ type ExitCall struct {
 
 func (e *ExitCall) nodeType() string { return "ExitCall" }
 
+// ListLiteral: ["a", "b", "c"]
+type ListLiteral struct {
+	Elements []Node
+}
+
+func (l *ListLiteral) nodeType() string { return "ListLiteral" }
+
+// MapLiteral: {key: value, ...}
+type MapLiteral struct {
+	Keys   []string
+	Values []Node
+}
+
+func (m *MapLiteral) nodeType() string { return "MapLiteral" }
+
 // BlockExpr: { stmts... lastExpr } — used in `or { ... }` blocks
 type BlockExpr struct {
 	Statements []Node
@@ -159,6 +174,19 @@ func (m *MatchStmt) nodeType() string { return "MatchStmt" }
 
 // MatchCase: pattern => body
 type MatchCase struct {
-	Pattern  Node // nil means wildcard _
-	Body     []Node
+	Pattern Node // nil means wildcard _
+	Body    []Node
 }
+
+// WhileStmt: while condition { body }
+type WhileStmt struct {
+	Condition Node
+	Body      []Node
+}
+
+func (w *WhileStmt) nodeType() string { return "WhileStmt" }
+
+// BreakStmt: break
+type BreakStmt struct{}
+
+func (b *BreakStmt) nodeType() string { return "BreakStmt" }

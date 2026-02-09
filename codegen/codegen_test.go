@@ -147,7 +147,7 @@ func TestWriteBuiltin(t *testing.T) {
 func TestRmBuiltin(t *testing.T) {
 	output := body(compile(`rm("temp.txt")`))
 
-	assert.Contains(t, output, `rm "temp.txt"`)
+	assert.Contains(t, output, `rm -f "temp.txt"`)
 }
 
 func TestMkdirBuiltin(t *testing.T) {
@@ -229,8 +229,176 @@ func TestFetchBuiltin(t *testing.T) {
 	assert.Contains(t, output, `curl -sf "https://api.example.com/health"`)
 }
 
+func TestListLiteralCodegen(t *testing.T) {
+	output := body(compile(`items = ["a", "b", "c"]`))
+
+	assert.Equal(t, `items=("a" "b" "c")`, output)
+}
+
+func TestEmptyListCodegen(t *testing.T) {
+	output := body(compile(`items = []`))
+
+	assert.Equal(t, `items=()`, output)
+}
+
+func TestMapLiteralCodegen(t *testing.T) {
+	output := body(compile(`config = {port: 8080, host: "localhost"}`))
+
+	assert.Contains(t, output, `declare -A config`)
+	assert.Contains(t, output, `config[port]=8080`)
+	assert.Contains(t, output, `config[host]="localhost"`)
+}
+
+func TestRangeForLoop(t *testing.T) {
+	output := body(compile(`for i in range(0, 10) { print(i) }`))
+
+	assert.Contains(t, output, `for i in $(seq 0 10); do`)
+	assert.Contains(t, output, `echo "$i"`)
+	assert.Contains(t, output, "done")
+}
+
+func TestArgsBuiltin(t *testing.T) {
+	output := body(compile(`params = args()`))
+
+	assert.Contains(t, output, `params=("$@")`)
+}
+
+func TestOsBuiltin(t *testing.T) {
+	output := body(compile(`platform = os()`))
+
+	assert.Contains(t, output, `platform=$(uname -s | tr '[:upper:]' '[:lower:]')`)
+}
+
 func TestOrWithContinueCodegen(t *testing.T) {
 	output := body(compile(`content = read(f) or continue`))
 
 	assert.Contains(t, output, "continue")
+}
+
+func TestEqualityComparison(t *testing.T) {
+	output := body(compile(`if x == 10 { print("eq") }`))
+
+	assert.Contains(t, output, `if [ "$x" = 10 ]; then`)
+}
+
+func TestNotEqualComparison(t *testing.T) {
+	output := body(compile(`if x != 10 { print("ne") }`))
+
+	assert.Contains(t, output, `if [ "$x" != 10 ]; then`)
+}
+
+func TestLessThanComparison(t *testing.T) {
+	output := body(compile(`if x < 10 { print("lt") }`))
+
+	assert.Contains(t, output, `if [ "$x" -lt 10 ]; then`)
+}
+
+func TestGreaterEqualComparison(t *testing.T) {
+	output := body(compile(`if x >= 10 { print("ge") }`))
+
+	assert.Contains(t, output, `if [ "$x" -ge 10 ]; then`)
+}
+
+func TestLessEqualComparison(t *testing.T) {
+	output := body(compile(`if x <= 10 { print("le") }`))
+
+	assert.Contains(t, output, `if [ "$x" -le 10 ]; then`)
+}
+
+func TestArithmeticExpression(t *testing.T) {
+	output := body(compile(`result = a + b`))
+
+	assert.Contains(t, output, `result=$((a + b))`)
+}
+
+func TestWhileLoop(t *testing.T) {
+	output := body(compile(`while x > 0 { print(x) }`))
+
+	assert.Contains(t, output, `while [ "$x" -gt 0 ]; do`)
+	assert.Contains(t, output, `echo "$x"`)
+	assert.Contains(t, output, "done")
+}
+
+func TestBreakStatement(t *testing.T) {
+	output := body(compile(`break`))
+
+	assert.Equal(t, "break", output)
+}
+
+func TestLogicalAnd(t *testing.T) {
+	output := body(compile(`if a and b { print("both") }`))
+
+	assert.Contains(t, output, `if [ "$a" = true ] && [ "$b" = true ]; then`)
+}
+
+func TestSleepBuiltin(t *testing.T) {
+	output := body(compile(`sleep(5)`))
+
+	assert.Contains(t, output, "sleep 5")
+}
+
+func TestAppendBuiltin(t *testing.T) {
+	output := body(compile(`append("log.txt", "entry")`))
+
+	assert.Contains(t, output, `echo "entry" >> "log.txt"`)
+}
+
+func TestHostnameBuiltin(t *testing.T) {
+	output := body(compile(`host = hostname()`))
+
+	assert.Contains(t, output, `host=$(hostname)`)
+}
+
+func TestWhoamiBuiltin(t *testing.T) {
+	output := body(compile(`user = whoami()`))
+
+	assert.Contains(t, output, `user=$(whoami)`)
+}
+
+func TestArchBuiltin(t *testing.T) {
+	output := body(compile(`a = arch()`))
+
+	assert.Contains(t, output, `a=$(uname -m)`)
+}
+
+func TestDirnameBuiltin(t *testing.T) {
+	output := body(compile(`dir = dirname("/path/to/file.txt")`))
+
+	assert.Contains(t, output, `dir=$(dirname "/path/to/file.txt")`)
+}
+
+func TestBasenameBuiltin(t *testing.T) {
+	output := body(compile(`name = basename("/path/to/file.txt")`))
+
+	assert.Contains(t, output, `name=$(basename "/path/to/file.txt")`)
+}
+
+func TestIsFileBuiltin(t *testing.T) {
+	output := body(compile(`if is_file("test.txt") { print("file") }`))
+
+	assert.Contains(t, output, `[ -f "test.txt" ]`)
+}
+
+func TestIsDirBuiltin(t *testing.T) {
+	output := body(compile(`if is_dir("build") { print("dir") }`))
+
+	assert.Contains(t, output, `[ -d "build" ]`)
+}
+
+func TestRmdirBuiltin(t *testing.T) {
+	output := body(compile(`rmdir("build")`))
+
+	assert.Contains(t, output, `rm -rf "build"`)
+}
+
+func TestUpperBuiltin(t *testing.T) {
+	output := body(compile(`x = upper("hello")`))
+
+	assert.Contains(t, output, `x=$(echo "hello" | tr '[:lower:]' '[:upper:]')`)
+}
+
+func TestLowerBuiltin(t *testing.T) {
+	output := body(compile(`x = lower("HELLO")`))
+
+	assert.Contains(t, output, `x=$(echo "HELLO" | tr '[:upper:]' '[:lower:]')`)
 }
