@@ -72,6 +72,15 @@ var keywords = map[string]TokenType{
 	"while":    WHILE,
 }
 
+// KeywordNames returns all keyword strings.
+func KeywordNames() []string {
+	names := make([]string, 0, len(keywords))
+	for k := range keywords {
+		names = append(names, k)
+	}
+	return names
+}
+
 // Token represents a single lexical token with position information.
 type Token struct {
 	Type  TokenType

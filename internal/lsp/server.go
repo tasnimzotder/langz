@@ -31,6 +31,10 @@ func NewServer() *Server {
 	s.handler.TextDocumentDidChange = s.textDocumentDidChange
 	s.handler.TextDocumentDidClose = s.textDocumentDidClose
 	s.handler.TextDocumentHover = s.textDocumentHover
+	s.handler.TextDocumentCompletion = s.textDocumentCompletion
+	s.handler.TextDocumentDefinition = s.textDocumentDefinition
+	s.handler.TextDocumentDocumentSymbol = s.textDocumentDocumentSymbol
+	s.handler.TextDocumentFormatting = s.textDocumentFormatting
 
 	return s
 }
@@ -47,6 +51,10 @@ func (s *Server) initialize(ctx *glsp.Context, params *protocol.InitializeParams
 	// Use full document sync (client sends entire content on every change)
 	syncKind := protocol.TextDocumentSyncKindFull
 	capabilities.TextDocumentSync = syncKind
+	capabilities.CompletionProvider = &protocol.CompletionOptions{}
+	capabilities.DefinitionProvider = true
+	capabilities.DocumentSymbolProvider = true
+	capabilities.DocumentFormattingProvider = true
 
 	version := serverVersion
 	return protocol.InitializeResult{
