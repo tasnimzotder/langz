@@ -331,6 +331,19 @@ func TestLogicalAnd(t *testing.T) {
 	assert.Contains(t, output, `if [ "$a" = true ] && [ "$b" = true ]; then`)
 }
 
+func TestLogicalOr(t *testing.T) {
+	output := body(compile(`if a or b { print("either") }`))
+
+	assert.Contains(t, output, `if [ "$a" = true ] || [ "$b" = true ]; then`)
+}
+
+func TestLogicalAndOr(t *testing.T) {
+	output := body(compile(`if a and b or c { print("yes") }`))
+
+	// and binds tighter, so: (a && b) || c
+	assert.Contains(t, output, `if [ "$a" = true ] && [ "$b" = true ] || [ "$c" = true ]; then`)
+}
+
 func TestSleepBuiltin(t *testing.T) {
 	output := body(compile(`sleep(5)`))
 

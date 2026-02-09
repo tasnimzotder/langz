@@ -841,6 +841,62 @@ if a * b > 20 {
 	assert.Contains(t, output, "product is small")
 }
 
+func TestE2E_LogicalOr(t *testing.T) {
+	source := `
+a = true
+b = false
+if a or b {
+	print("either true")
+}
+
+c = false
+d = false
+if c or d {
+	print("should not print")
+} else {
+	print("both false")
+}
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	lines := strings.Split(output, "\n")
+	assert.Equal(t, "either true", lines[0])
+	assert.Equal(t, "both false", lines[1])
+}
+
+func TestE2E_LogicalAndOr(t *testing.T) {
+	source := `
+a = true
+b = false
+c = true
+
+// a and b or c => (true and false) or true => false or true => true
+if a and b or c {
+	print("combined true")
+}
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "combined true", output)
+}
+
+func TestE2E_OrFallbackStillWorks(t *testing.T) {
+	// Verify assignment `or` fallback is not broken
+	source := `
+name = env("LANGZ_OR_FALLBACK_TEST") or "default_val"
+print(name)
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "default_val", output)
+}
+
 func mustReadFile(t *testing.T, path string) string {
 	t.Helper()
 	data, err := os.ReadFile(path)

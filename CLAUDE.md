@@ -31,10 +31,6 @@ Pipeline: Source (.lz) → Lexer → Parser (recursive descent) → Codegen → 
 - Parser methods split across files but share `*Parser` receiver
 - Integration tests use `projectRoot()` helper to locate `go.mod` for CLI subprocess tests
 
-## Known Issues
-
-- `or` works in assignments but not yet in conditions (only `and` works in conditions)
-
 ## Style
 
 - Testify (`assert`/`require`) for all assertions

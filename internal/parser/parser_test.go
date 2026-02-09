@@ -533,6 +533,57 @@ func TestMatchWithBlockArm(t *testing.T) {
 	assert.Len(t, m.Cases[2].Body, 1)
 }
 
+func TestLogicalOr(t *testing.T) {
+	prog := parse(`if a or b { print("either") }`)
+	require.Len(t, prog.Statements, 1)
+	ifStmt := prog.Statements[0].(*ast.IfStmt)
+	bin, ok := ifStmt.Condition.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, "or", bin.Op)
+
+	left, ok := bin.Left.(*ast.Identifier)
+	require.True(t, ok, "expected Identifier on left")
+	assert.Equal(t, "a", left.Name)
+
+	right, ok := bin.Right.(*ast.Identifier)
+	require.True(t, ok, "expected Identifier on right")
+	assert.Equal(t, "b", right.Name)
+}
+
+func TestLogicalAndOr(t *testing.T) {
+	// `a and b or c` should parse as `(a and b) or c`
+	// because `and` has higher precedence than `or`
+	prog := parse(`if a and b or c { print("yes") }`)
+	require.Len(t, prog.Statements, 1)
+	ifStmt := prog.Statements[0].(*ast.IfStmt)
+
+	// Top-level should be `or`
+	orExpr, ok := ifStmt.Condition.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr at top level")
+	assert.Equal(t, "or", orExpr.Op)
+
+	// Left of `or` should be `a and b`
+	andExpr, ok := orExpr.Left.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr on left of or")
+	assert.Equal(t, "and", andExpr.Op)
+
+	// Right of `or` should be identifier `c`
+	right, ok := orExpr.Right.(*ast.Identifier)
+	require.True(t, ok, "expected Identifier on right of or")
+	assert.Equal(t, "c", right.Name)
+}
+
+func TestLogicalOrInWhile(t *testing.T) {
+	prog := parse(`while a or b { print("loop") }`)
+	require.Len(t, prog.Statements, 1)
+	ws, ok := prog.Statements[0].(*ast.WhileStmt)
+	require.True(t, ok, "expected WhileStmt")
+
+	bin, ok := ws.Condition.(*ast.BinaryExpr)
+	require.True(t, ok, "expected BinaryExpr")
+	assert.Equal(t, "or", bin.Op)
+}
+
 func TestArithmeticWithComparison(t *testing.T) {
 	// if a + b > c * d — comparison should be at top, arithmetic deeper
 	prog := parse(`if a + b > c * d { print("yes") }`)

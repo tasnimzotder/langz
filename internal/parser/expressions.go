@@ -5,10 +5,24 @@ import (
 	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
+// parseCondition handles `or` at the lowest precedence level, used only
+// in condition contexts (if/while). This keeps `or` out of parseExpression
+// so that assignment fallback (`x = expr or fallback`) still works.
+func (p *Parser) parseCondition() ast.Node {
+	left := p.parseExpression()
+	for p.current.Type == lexer.OR {
+		op := p.current.Value
+		p.advance()
+		right := p.parseExpression()
+		left = &ast.BinaryExpr{Left: left, Op: op, Right: right}
+	}
+	return left
+}
+
 func (p *Parser) parseExpression() ast.Node {
 	left := p.parseComparison()
 
-	// Handle logical operators: and, or (in condition context)
+	// Handle logical `and` operator
 	for p.current.Type == lexer.AND {
 		op := p.current.Value
 		p.advance()

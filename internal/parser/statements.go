@@ -74,7 +74,7 @@ func (p *Parser) parseBlock() []ast.Node {
 func (p *Parser) parseIf() *ast.IfStmt {
 	p.expect(lexer.IF)
 
-	condition := p.parseExpression()
+	condition := p.parseCondition()
 	body := p.parseBlock()
 
 	var elseBody []ast.Node
@@ -101,7 +101,7 @@ func (p *Parser) parseFor() *ast.ForStmt {
 func (p *Parser) parseWhile() *ast.WhileStmt {
 	p.expect(lexer.WHILE)
 
-	condition := p.parseExpression()
+	condition := p.parseCondition()
 	body := p.parseBlock()
 
 	return &ast.WhileStmt{Condition: condition, Body: body}
