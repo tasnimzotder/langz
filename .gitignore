@@ -1,0 +1,15 @@
+# Binaries
+langz
+*.exe
+
+# Editor artifacts
+editors/vscode/node_modules/
+editors/vscode/out/
+editors/vscode/*.vsix
+
+# OS files
+.DS_Store
+
+# Generated scripts
+*.sh
+!examples/*.sh
