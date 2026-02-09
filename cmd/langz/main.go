@@ -9,16 +9,29 @@ import (
 
 	"github.com/tasnimzotder/langz/internal/codegen"
 	"github.com/tasnimzotder/langz/internal/lexer"
+	"github.com/tasnimzotder/langz/internal/lsp"
 	"github.com/tasnimzotder/langz/internal/parser"
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "Usage: langz <build|run|lsp> <file.lz>")
+		os.Exit(1)
+	}
+
+	command := os.Args[1]
+
+	// LSP server needs no file argument
+	if command == "lsp" {
+		lsp.NewServer().Run()
+		return
+	}
+
 	if len(os.Args) < 3 {
 		fmt.Fprintln(os.Stderr, "Usage: langz <build|run> <file.lz>")
 		os.Exit(1)
 	}
 
-	command := os.Args[1]
 	inputFile := os.Args[2]
 
 	source, err := os.ReadFile(inputFile)
@@ -70,7 +83,7 @@ func main() {
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\nUsage: langz <build|run> <file.lz>\n", command)
+		fmt.Fprintf(os.Stderr, "Unknown command: %s\nUsage: langz <build|run|lsp> <file.lz>\n", command)
 		os.Exit(1)
 	}
 }

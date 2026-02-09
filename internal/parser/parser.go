@@ -7,12 +7,19 @@ import (
 	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
+// ParseError represents a structured parse error with position.
+type ParseError struct {
+	Line    int
+	Col     int
+	Message string
+}
+
 // Parser converts a token stream into an AST.
 type Parser struct {
 	tokens  []lexer.Token
 	pos     int
 	current lexer.Token
-	errors  []string
+	errors  []ParseError
 }
 
 // New creates a new Parser from a slice of tokens.
@@ -44,7 +51,11 @@ func (p *Parser) peekAt(offset int) lexer.Token {
 }
 
 func (p *Parser) addError(msg string) {
-	p.errors = append(p.errors, fmt.Sprintf("line %d, col %d: %s", p.current.Line, p.current.Col, msg))
+	p.errors = append(p.errors, ParseError{
+		Line:    p.current.Line,
+		Col:     p.current.Col,
+		Message: msg,
+	})
 }
 
 func (p *Parser) expect(t lexer.TokenType) lexer.Token {
@@ -66,7 +77,7 @@ func (p *Parser) Parse() *ast.Program {
 	return prog
 }
 
-// ParseWithErrors parses tokens and returns errors instead of panicking.
+// ParseWithErrors parses tokens and returns the first error (backwards-compatible).
 func (p *Parser) ParseWithErrors() (*ast.Program, error) {
 	prog := &ast.Program{}
 
@@ -78,7 +89,23 @@ func (p *Parser) ParseWithErrors() (*ast.Program, error) {
 	}
 
 	if len(p.errors) > 0 {
-		return prog, fmt.Errorf("%s", p.errors[0])
+		e := p.errors[0]
+		return prog, fmt.Errorf("line %d, col %d: %s", e.Line, e.Col, e.Message)
 	}
 	return prog, nil
+}
+
+// ParseAllErrors parses tokens and returns ALL structured errors.
+// The returned *ast.Program is always non-nil (partial program on errors).
+func (p *Parser) ParseAllErrors() (*ast.Program, []ParseError) {
+	prog := &ast.Program{}
+
+	for p.current.Type != lexer.EOF {
+		stmt := p.parseStatement()
+		if stmt != nil {
+			prog.Statements = append(prog.Statements, stmt)
+		}
+	}
+
+	return prog, p.errors
 }

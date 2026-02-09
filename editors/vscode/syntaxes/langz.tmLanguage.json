@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Langz",
+  "scopeName": "source.langz",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#builtins" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.double-slash.langz",
+      "match": "//.*$"
+    },
+    "strings": {
+      "name": "string.quoted.double.langz",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "variable.interpolation.langz",
+          "match": "\\{\\w+\\}"
+        }
+      ]
+    },
+    "numbers": {
+      "name": "constant.numeric.langz",
+      "match": "\\b[0-9]+\\b"
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.langz",
+          "match": "\\b(if|else|for|in|fn|return|match|continue|break|while)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.langz",
+          "match": "\\b(and|or)\\b"
+        },
+        {
+          "name": "constant.language.langz",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "builtins": {
+      "name": "support.function.langz",
+      "match": "\\b(print|exec|env|read|write|rm|mkdir|copy|move|chmod|glob|exit|fetch|sleep|append|hostname|whoami|arch|dirname|basename|is_file|is_dir|rmdir|upper|lower|os|args|range|exists)\\b(?=\\s*\\()"
+    },
+    "operators": {
+      "name": "keyword.operator.langz",
+      "match": "(=>|->|==|!=|>=|<=|[=+\\-*/%<>!])"
+    }
+  }
+}
