@@ -24,22 +24,32 @@ type ExprResult struct {
 
 // GenStmt generates a Bash statement for a builtin function call.
 // Returns (code, true) if the function is a known builtin, ("", false) otherwise.
-func GenStmt(name string, args []ast.Node, genExpr ExprGen, genRaw RawValueGen) StmtResult {
+func GenStmt(name string, args []ast.Node, kwargs []ast.KeywordArg, genExpr ExprGen, genRaw RawValueGen) StmtResult {
 	handler, ok := stmtBuiltins[name]
 	if !ok {
 		return StmtResult{}
 	}
-	return StmtResult{Code: handler(args, genExpr, genRaw), OK: true}
+	return StmtResult{Code: handler(args, kwargs, genExpr, genRaw), OK: true}
 }
 
 // GenExpr generates a Bash expression for a builtin function call.
 // Returns (code, true) if the function is a known builtin, ("", false) otherwise.
-func GenExpr(name string, args []ast.Node, genExpr ExprGen, genRaw RawValueGen) ExprResult {
+func GenExpr(name string, args []ast.Node, kwargs []ast.KeywordArg, genExpr ExprGen, genRaw RawValueGen) ExprResult {
 	handler, ok := exprBuiltins[name]
 	if !ok {
 		return ExprResult{}
 	}
-	return ExprResult{Code: handler(args, genExpr, genRaw), OK: true}
+	return ExprResult{Code: handler(args, kwargs, genExpr, genRaw), OK: true}
 }
 
-type builtinHandler func(args []ast.Node, genExpr ExprGen, genRaw RawValueGen) string
+// FindKwarg looks up a keyword argument by key name.
+func FindKwarg(kwargs []ast.KeywordArg, key string) (ast.Node, bool) {
+	for _, kw := range kwargs {
+		if kw.Key == key {
+			return kw.Value, true
+		}
+	}
+	return nil, false
+}
+
+type builtinHandler func(args []ast.Node, kwargs []ast.KeywordArg, genExpr ExprGen, genRaw RawValueGen) string

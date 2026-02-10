@@ -127,8 +127,9 @@ func (p *Parser) parsePrimary() ast.Node {
 		return p.parseListLiteral()
 
 	case lexer.LBRACE:
-		// Distinguish map literal from block: { ident : ... } is a map
-		if p.peek().Type == lexer.IDENT && p.peekAt(2).Type == lexer.COLON {
+		// Distinguish map literal from block: { ident/string : ... } is a map
+		nextType := p.peek().Type
+		if (nextType == lexer.IDENT || nextType == lexer.STRING) && p.peekAt(2).Type == lexer.COLON {
 			return p.parseMapLiteral()
 		}
 		return nil
@@ -152,10 +153,25 @@ func (p *Parser) parseFuncCall() *ast.FuncCall {
 	p.expect(lexer.LPAREN)
 
 	var args []ast.Node
+	var kwargs []ast.KeywordArg
+	seenKwarg := false
+
 	for p.current.Type != lexer.RPAREN && p.current.Type != lexer.EOF {
-		arg := p.parseExpression()
-		if arg != nil {
-			args = append(args, arg)
+		// Detect keyword arg: IDENT followed by COLON
+		if p.current.Type == lexer.IDENT && p.peek().Type == lexer.COLON {
+			seenKwarg = true
+			key := p.expect(lexer.IDENT)
+			p.expect(lexer.COLON)
+			value := p.parseExpression()
+			kwargs = append(kwargs, ast.KeywordArg{Key: key.Value, Value: value})
+		} else {
+			if seenKwarg {
+				p.addError("positional argument after keyword argument")
+			}
+			arg := p.parseExpression()
+			if arg != nil {
+				args = append(args, arg)
+			}
 		}
 		if p.current.Type == lexer.COMMA {
 			p.advance()
@@ -163,7 +179,7 @@ func (p *Parser) parseFuncCall() *ast.FuncCall {
 	}
 
 	p.expect(lexer.RPAREN)
-	return &ast.FuncCall{Name: name.Value, Args: args}
+	return &ast.FuncCall{Name: name.Value, Args: args, KwArgs: kwargs}
 }
 
 func (p *Parser) parseListLiteral() *ast.ListLiteral {
@@ -191,11 +207,17 @@ func (p *Parser) parseMapLiteral() *ast.MapLiteral {
 	var values []ast.Node
 
 	for p.current.Type != lexer.RBRACE && p.current.Type != lexer.EOF {
-		key := p.expect(lexer.IDENT)
+		var keyStr string
+		if p.current.Type == lexer.STRING {
+			keyStr = p.current.Value
+			p.advance()
+		} else {
+			keyStr = p.expect(lexer.IDENT).Value
+		}
 		p.expect(lexer.COLON)
 		value := p.parseExpression()
 
-		keys = append(keys, key.Value)
+		keys = append(keys, keyStr)
 		values = append(values, value)
 
 		if p.current.Type == lexer.COMMA {

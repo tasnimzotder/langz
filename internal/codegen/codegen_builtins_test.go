@@ -81,7 +81,9 @@ func TestExitBuiltin(t *testing.T) {
 func TestFetchBuiltin(t *testing.T) {
 	output := body(compile(`res = fetch("https://api.example.com/health")`))
 
-	assert.Contains(t, output, `curl -sf "https://api.example.com/health"`)
+	assert.Contains(t, output, `curl -s -w "%{http_code}"`)
+	assert.Contains(t, output, `"https://api.example.com/health"`)
+	assert.Contains(t, output, `res="$_body"`)
 }
 
 func TestSleepBuiltin(t *testing.T) {

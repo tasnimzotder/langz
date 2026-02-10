@@ -48,10 +48,19 @@ type Identifier struct {
 
 func (id *Identifier) nodeType() string { return "Identifier" }
 
-// FuncCall: print("hello"), exec("cmd")
+// KeywordArg: key: value in function calls
+type KeywordArg struct {
+	Key   string
+	Value Node
+}
+
+func (k *KeywordArg) nodeType() string { return "KeywordArg" }
+
+// FuncCall: print("hello"), fetch("url", method: "POST")
 type FuncCall struct {
-	Name string
-	Args []Node
+	Name   string
+	Args   []Node
+	KwArgs []KeywordArg
 }
 
 func (f *FuncCall) nodeType() string { return "FuncCall" }

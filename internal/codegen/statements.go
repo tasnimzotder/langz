@@ -42,6 +42,10 @@ func (g *Generator) genAssignment(a *ast.Assignment) {
 		g.genMapAssignment(a.Name, mapLit)
 		return
 	}
+	if call, ok := a.Value.(*ast.FuncCall); ok && call.Name == "fetch" {
+		g.genFetchAssignment(a.Name, call)
+		return
+	}
 	g.writeIndent()
 	value := g.genExpr(a.Value)
 	g.write(fmt.Sprintf("%s=%s\n", a.Name, value))
@@ -62,6 +66,19 @@ func (g *Generator) genOrAssignment(name string, or *ast.OrExpr) {
 			g.writeln(fmt.Sprintf(`%s="${%s:-%s}"`, name, envName, interpolate(strVal.Value)))
 			return
 		}
+	}
+
+	// Special case: fetch(url) or fallback -> curl + status check + fallback
+	if call, ok := or.Expr.(*ast.FuncCall); ok && call.Name == "fetch" {
+		g.genFetchAssignment(name, call)
+		g.writeln(`if [ "$_status" -ge 200 ] && [ "$_status" -lt 300 ]; then`)
+		g.indent++
+		g.writeln("true")
+		g.indent--
+		g.writeln("else")
+		g.genOrFallback(name, or.Fallback)
+		g.writeln("fi")
+		return
 	}
 
 	// General case: if name=$(expr 2>/dev/null); then true; else fallback; fi
@@ -108,7 +125,11 @@ func (g *Generator) genOrFallback(name string, fallback ast.Node) {
 }
 
 func (g *Generator) genFuncCallStmt(f *ast.FuncCall) {
-	result := builtins.GenStmt(f.Name, f.Args, g.genExpr, g.genRawValue)
+	if f.Name == "fetch" {
+		g.genFetchStatement(f)
+		return
+	}
+	result := builtins.GenStmt(f.Name, f.Args, f.KwArgs, g.genExpr, g.genRawValue)
 	if result.OK {
 		g.writeln(result.Code)
 		return

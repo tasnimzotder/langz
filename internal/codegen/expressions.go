@@ -56,7 +56,7 @@ func (g *Generator) genExpr(node ast.Node) string {
 }
 
 func (g *Generator) genFuncCallExpr(f *ast.FuncCall) string {
-	result := builtins.GenExpr(f.Name, f.Args, g.genExpr, g.genRawValue)
+	result := builtins.GenExpr(f.Name, f.Args, f.KwArgs, g.genExpr, g.genRawValue)
 	if result.OK {
 		return result.Code
 	}
