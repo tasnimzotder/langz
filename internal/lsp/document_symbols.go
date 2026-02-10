@@ -5,9 +5,13 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (s *Server) textDocumentDocumentSymbol(ctx *glsp.Context, params *protocol.DocumentSymbolParams) (any, error) {
+func (s *Server) textDocumentDocumentSymbol(ctx *glsp.Context, params *protocol.DocumentSymbolParams) (result any, err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
-	content := s.documents[uri]
+	content, ok := s.documents[uri]
+	if !ok {
+		return nil, nil
+	}
 	return getDocumentSymbols(content), nil
 }
 

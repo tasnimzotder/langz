@@ -1,11 +1,15 @@
 package lsp
 
 import (
+	"fmt"
+
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	glspServer "github.com/tliron/glsp/server"
 
 	_ "github.com/tliron/commonlog/simple"
+
+	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
 const serverName = "langz-lsp"
@@ -15,12 +19,14 @@ const serverVersion = "0.1.0"
 type Server struct {
 	handler   protocol.Handler
 	documents map[protocol.DocumentUri]string
+	tokens    map[protocol.DocumentUri][]lexer.Token
 }
 
 // NewServer creates a new LSP server with diagnostics and hover support.
 func NewServer() *Server {
 	s := &Server{
 		documents: make(map[protocol.DocumentUri]string),
+		tokens:    make(map[protocol.DocumentUri][]lexer.Token),
 	}
 
 	s.handler.Initialize = s.initialize
@@ -83,15 +89,39 @@ func (s *Server) setTrace(ctx *glsp.Context, params *protocol.SetTraceParams) er
 	return nil
 }
 
-func (s *Server) textDocumentDidOpen(ctx *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
+// getTokens returns cached tokens for a URI, or tokenizes the content if not cached.
+func (s *Server) getTokens(uri protocol.DocumentUri) []lexer.Token {
+	if tokens, ok := s.tokens[uri]; ok {
+		return tokens
+	}
+	if content, ok := s.documents[uri]; ok {
+		tokens := lexer.New(content).Tokenize()
+		s.tokens[uri] = tokens
+		return tokens
+	}
+	return nil
+}
+
+// recoverErr recovers from panics and converts them to errors.
+// Used in LSP handlers to prevent server crashes.
+func recoverErr(err *error) {
+	if r := recover(); r != nil {
+		*err = fmt.Errorf("internal error: %v", r)
+	}
+}
+
+func (s *Server) textDocumentDidOpen(ctx *glsp.Context, params *protocol.DidOpenTextDocumentParams) (err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
 	content := params.TextDocument.Text
 	s.documents[uri] = content
+	s.tokens[uri] = lexer.New(content).Tokenize()
 	s.publishDiagnostics(ctx, uri, content)
 	return nil
 }
 
-func (s *Server) textDocumentDidChange(ctx *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
+func (s *Server) textDocumentDidChange(ctx *glsp.Context, params *protocol.DidChangeTextDocumentParams) (err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
 
 	// With TextDocumentSyncKindFull, we get the entire document content
@@ -106,14 +136,17 @@ func (s *Server) textDocumentDidChange(ctx *glsp.Context, params *protocol.DidCh
 	}
 
 	if content, ok := s.documents[uri]; ok {
+		s.tokens[uri] = lexer.New(content).Tokenize()
 		s.publishDiagnostics(ctx, uri, content)
 	}
 	return nil
 }
 
-func (s *Server) textDocumentDidClose(ctx *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
+func (s *Server) textDocumentDidClose(ctx *glsp.Context, params *protocol.DidCloseTextDocumentParams) (err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
 	delete(s.documents, uri)
+	delete(s.tokens, uri)
 
 	// Clear diagnostics for the closed file
 	ctx.Notify(protocol.ServerTextDocumentPublishDiagnostics, &protocol.PublishDiagnosticsParams{

@@ -57,7 +57,8 @@ const (
 	BREAK    TokenType = "BREAK"
 	WHILE    TokenType = "WHILE"
 
-	EOF TokenType = "EOF"
+	EOF     TokenType = "EOF"
+	ILLEGAL TokenType = "ILLEGAL"
 )
 
 var keywords = map[string]TokenType{

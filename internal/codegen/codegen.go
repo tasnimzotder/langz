@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/tasnimzotder/langz/internal/ast"
@@ -14,7 +15,13 @@ type Generator struct {
 
 // Generate converts an AST program into a Bash script string.
 // Returns the generated Bash and any codegen errors found.
-func Generate(prog *ast.Program) (string, []string) {
+func Generate(prog *ast.Program) (output string, errs []string) {
+	defer func() {
+		if r := recover(); r != nil {
+			output = ""
+			errs = []string{fmt.Sprintf("internal error: %v", r)}
+		}
+	}()
 	g := &Generator{}
 	g.writeln("#!/bin/bash")
 	g.writeln("set -euo pipefail")
@@ -24,8 +31,9 @@ func Generate(prog *ast.Program) (string, []string) {
 		g.genStatement(stmt)
 	}
 
-	output := strings.TrimRight(g.buf.String(), "\n") + "\n"
-	return output, findCodegenErrors(output)
+	output = strings.TrimRight(g.buf.String(), "\n") + "\n"
+	errs = findCodegenErrors(output)
+	return output, errs
 }
 
 // findCodegenErrors scans generated Bash for # error: markers

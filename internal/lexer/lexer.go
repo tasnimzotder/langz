@@ -1,10 +1,15 @@
 package lexer
 
+import (
+	"unicode"
+	"unicode/utf8"
+)
+
 // Lexer tokenizes Langz source code into a stream of tokens.
 type Lexer struct {
 	input   string
 	pos     int
-	current byte
+	current rune
 	line    int
 	col     int
 }
@@ -13,7 +18,8 @@ type Lexer struct {
 func New(input string) *Lexer {
 	l := &Lexer{input: input, line: 1, col: 1}
 	if len(input) > 0 {
-		l.current = input[0]
+		r, _ := utf8.DecodeRuneInString(input)
+		l.current = r
 	}
 	return l
 }
@@ -23,10 +29,15 @@ func (l *Lexer) advance() {
 		l.line++
 		l.col = 0
 	}
-	l.pos++
+	size := utf8.RuneLen(l.current)
+	if size < 1 {
+		size = 1
+	}
+	l.pos += size
 	l.col++
 	if l.pos < len(l.input) {
-		l.current = l.input[l.pos]
+		r, _ := utf8.DecodeRuneInString(l.input[l.pos:])
+		l.current = r
 	} else {
 		l.current = 0
 	}
@@ -36,9 +47,25 @@ func (l *Lexer) token(t TokenType, value string, line, col int) Token {
 	return Token{Type: t, Value: value, Line: line, Col: col}
 }
 
-func (l *Lexer) peek() byte {
+func (l *Lexer) peekByte() byte {
+	if l.pos+utf8.RuneLen(l.current) < len(l.input) {
+		return l.input[l.pos+utf8.RuneLen(l.current)]
+	}
 	if l.pos+1 < len(l.input) {
 		return l.input[l.pos+1]
+	}
+	return 0
+}
+
+func (l *Lexer) peekRune() rune {
+	size := utf8.RuneLen(l.current)
+	if size < 1 {
+		size = 1
+	}
+	nextPos := l.pos + size
+	if nextPos < len(l.input) {
+		r, _ := utf8.DecodeRuneInString(l.input[nextPos:])
+		return r
 	}
 	return 0
 }
@@ -47,7 +74,7 @@ func (l *Lexer) skipWhitespace() {
 	for l.pos < len(l.input) {
 		if l.current == ' ' || l.current == '\t' || l.current == '\n' || l.current == '\r' {
 			l.advance()
-		} else if l.current == '/' && l.peek() == '/' {
+		} else if l.current == '/' && l.peekByte() == '/' {
 			l.skipComment()
 		} else {
 			break
@@ -61,7 +88,9 @@ func (l *Lexer) skipComment() {
 	}
 }
 
-func (l *Lexer) readString() string {
+// readString reads a string literal. Returns the content and whether the string
+// was properly terminated. An unterminated string returns (partial, false).
+func (l *Lexer) readString() (string, bool) {
 	l.advance() // skip opening "
 	var buf []byte
 	for l.pos < len(l.input) && l.current != '"' {
@@ -82,12 +111,15 @@ func (l *Lexer) readString() string {
 			l.advance() // skip '\'
 			l.advance() // skip escaped char
 		} else {
-			buf = append(buf, l.current)
+			buf = append(buf, l.input[l.pos])
 			l.advance()
 		}
 	}
+	if l.current != '"' {
+		return string(buf), false
+	}
 	l.advance() // skip closing "
-	return string(buf)
+	return string(buf), true
 }
 
 func (l *Lexer) readIdent() string {
@@ -106,16 +138,16 @@ func (l *Lexer) readNumber() string {
 	return l.input[start:l.pos]
 }
 
-func isLetter(ch byte) bool {
-	return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z'
+func isLetter(ch rune) bool {
+	return unicode.IsLetter(ch)
 }
 
-func isDigit(ch byte) bool {
+func isDigit(ch rune) bool {
 	return ch >= '0' && ch <= '9'
 }
 
-func isAlphanumeric(ch byte) bool {
-	return isLetter(ch) || isDigit(ch) || ch == '_'
+func isAlphanumeric(ch rune) bool {
+	return unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == '_'
 }
 
 // Tokenize scans the entire input and returns a slice of tokens.
@@ -133,10 +165,10 @@ func (l *Lexer) Tokenize() []Token {
 
 		switch {
 		case l.current == '=':
-			if l.peek() == '>' {
+			if l.peekByte() == '>' {
 				tokens = append(tokens, l.token(FATARROW, "=>", line, col))
 				l.advance()
-			} else if l.peek() == '=' {
+			} else if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(EQ, "==", line, col))
 				l.advance()
 			} else {
@@ -144,19 +176,19 @@ func (l *Lexer) Tokenize() []Token {
 			}
 			l.advance()
 		case l.current == '!':
-			if l.peek() == '=' {
+			if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(NEQ, "!=", line, col))
 				l.advance()
 			} else {
 				tokens = append(tokens, l.token(BANG, "!", line, col))
 			}
 			l.advance()
-		case l.current == '-' && l.peek() == '>':
+		case l.current == '-' && l.peekByte() == '>':
 			tokens = append(tokens, l.token(ARROW, "->", line, col))
 			l.advance()
 			l.advance()
 		case l.current == '>':
-			if l.peek() == '=' {
+			if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(GTE, ">=", line, col))
 				l.advance()
 			} else {
@@ -164,7 +196,7 @@ func (l *Lexer) Tokenize() []Token {
 			}
 			l.advance()
 		case l.current == '<':
-			if l.peek() == '=' {
+			if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(LTE, "<=", line, col))
 				l.advance()
 			} else {
@@ -172,7 +204,7 @@ func (l *Lexer) Tokenize() []Token {
 			}
 			l.advance()
 		case l.current == '+':
-			if l.peek() == '=' {
+			if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(PLUS_ASSIGN, "+=", line, col))
 				l.advance()
 			} else {
@@ -180,7 +212,7 @@ func (l *Lexer) Tokenize() []Token {
 			}
 			l.advance()
 		case l.current == '-':
-			if l.peek() == '=' {
+			if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(MINUS_ASSIGN, "-=", line, col))
 				l.advance()
 			} else {
@@ -188,7 +220,7 @@ func (l *Lexer) Tokenize() []Token {
 			}
 			l.advance()
 		case l.current == '*':
-			if l.peek() == '=' {
+			if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(STAR_ASSIGN, "*=", line, col))
 				l.advance()
 			} else {
@@ -196,7 +228,7 @@ func (l *Lexer) Tokenize() []Token {
 			}
 			l.advance()
 		case l.current == '/':
-			if l.peek() == '=' {
+			if l.peekByte() == '=' {
 				tokens = append(tokens, l.token(SLASH_ASSIGN, "/=", line, col))
 				l.advance()
 			} else {
@@ -230,7 +262,7 @@ func (l *Lexer) Tokenize() []Token {
 		case l.current == ':':
 			tokens = append(tokens, l.token(COLON, ":", line, col))
 			l.advance()
-		case l.current == '|' && l.peek() == '>':
+		case l.current == '|' && l.peekByte() == '>':
 			tokens = append(tokens, l.token(PIPE, "|>", line, col))
 			l.advance()
 			l.advance()
@@ -238,10 +270,15 @@ func (l *Lexer) Tokenize() []Token {
 			tokens = append(tokens, l.token(DOT, ".", line, col))
 			l.advance()
 		case l.current == '"':
-			tokens = append(tokens, l.token(STRING, l.readString(), line, col))
+			str, ok := l.readString()
+			if ok {
+				tokens = append(tokens, l.token(STRING, str, line, col))
+			} else {
+				tokens = append(tokens, l.token(ILLEGAL, "unterminated string", line, col))
+			}
 		case isDigit(l.current):
 			tokens = append(tokens, l.token(INT, l.readNumber(), line, col))
-		case l.current == '_' && !isAlphanumeric(l.peek()):
+		case l.current == '_' && !isAlphanumeric(l.peekRune()):
 			tokens = append(tokens, l.token(UNDERSCORE, "_", line, col))
 			l.advance()
 		case isLetter(l.current) || l.current == '_':
@@ -252,6 +289,7 @@ func (l *Lexer) Tokenize() []Token {
 				tokens = append(tokens, l.token(IDENT, word, line, col))
 			}
 		default:
+			tokens = append(tokens, l.token(ILLEGAL, string(l.current), line, col))
 			l.advance()
 		}
 	}

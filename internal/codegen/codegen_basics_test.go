@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tasnimzotder/langz/internal/ast"
 )
 
 func TestPreamble(t *testing.T) {
@@ -121,4 +122,34 @@ func TestCodegenNoErrorOnValidCode(t *testing.T) {
 	_, errs := compileWithErrors(`print("hello")`)
 
 	assert.Empty(t, errs)
+}
+
+func TestUnhandledStatementTypeProducesError(t *testing.T) {
+	// ExitCall is in the AST but not handled by genStatement
+	prog := &ast.Program{
+		Statements: []ast.Node{
+			&ast.ExitCall{Code: &ast.IntLiteral{Value: "1"}},
+		},
+	}
+	_, errs := Generate(prog)
+
+	require.Len(t, errs, 1)
+	assert.Contains(t, errs[0], "unhandled statement type")
+}
+
+func TestUnhandledExpressionTypeProducesError(t *testing.T) {
+	// Assign an OrExpr without the special case in genAssignment
+	// Use a BlockExpr in assignment value (not a special-cased expr type)
+	prog := &ast.Program{
+		Statements: []ast.Node{
+			&ast.Assignment{
+				Name:  "x",
+				Value: &ast.BlockExpr{Statements: []ast.Node{}},
+			},
+		},
+	}
+	_, errs := Generate(prog)
+
+	require.Len(t, errs, 1)
+	assert.Contains(t, errs[0], "unhandled expression type")
 }

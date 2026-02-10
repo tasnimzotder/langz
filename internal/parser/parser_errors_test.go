@@ -48,3 +48,43 @@ func TestParseErrorPosition(t *testing.T) {
 	assert.Greater(t, errs[0].Line, 0)
 	assert.Greater(t, errs[0].Col, 0)
 }
+
+func TestIllegalTokenProducesError(t *testing.T) {
+	// An unterminated string produces an ILLEGAL token
+	tokens := lexer.New(`x = "unterminated`).Tokenize()
+	p := New(tokens)
+	_, errs := p.ParseAllErrors()
+
+	require.GreaterOrEqual(t, len(errs), 1)
+	assert.Contains(t, errs[0].Message, "unterminated string")
+}
+
+func TestUnknownCharTokenProducesError(t *testing.T) {
+	tokens := lexer.New(`x = @`).Tokenize()
+	p := New(tokens)
+	_, errs := p.ParseAllErrors()
+
+	require.GreaterOrEqual(t, len(errs), 1)
+	// The ILLEGAL token value "@" should appear in the error
+	found := false
+	for _, e := range errs {
+		if e.Message == "@" || assert.ObjectsAreEqual("unexpected token: ILLEGAL", e.Message) {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected error about unknown character, got: %v", errs)
+}
+
+func TestUnknownTokenInStatementProducesError(t *testing.T) {
+	// Simulate a random token the parser doesn't handle in statements
+	tokens := []lexer.Token{
+		{Type: lexer.COLON, Value: ":", Line: 1, Col: 1},
+		{Type: lexer.EOF, Value: "", Line: 1, Col: 2},
+	}
+	p := New(tokens)
+	_, errs := p.ParseAllErrors()
+
+	require.GreaterOrEqual(t, len(errs), 1)
+	assert.Contains(t, errs[0].Message, "unexpected token")
+}

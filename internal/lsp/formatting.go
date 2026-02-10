@@ -7,7 +7,8 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (s *Server) textDocumentFormatting(ctx *glsp.Context, params *protocol.DocumentFormattingParams) ([]protocol.TextEdit, error) {
+func (s *Server) textDocumentFormatting(ctx *glsp.Context, params *protocol.DocumentFormattingParams) (result []protocol.TextEdit, err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
 	content, ok := s.documents[uri]
 	if !ok {

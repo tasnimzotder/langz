@@ -374,3 +374,59 @@ func TestTokenPositions(t *testing.T) {
 	assert.Equal(t, 2, tokens[3].Line, "y line")
 	assert.Equal(t, 1, tokens[3].Col, "y col")
 }
+
+func TestUnterminatedString(t *testing.T) {
+	tokens := New(`x = "unterminated`).Tokenize()
+	// Should produce: IDENT, ASSIGN, ILLEGAL, EOF
+	require.True(t, len(tokens) >= 4)
+	assert.Equal(t, IDENT, tokens[0].Type)
+	assert.Equal(t, ASSIGN, tokens[1].Type)
+	assert.Equal(t, ILLEGAL, tokens[2].Type)
+	assert.Equal(t, "unterminated string", tokens[2].Value)
+	assert.Equal(t, EOF, tokens[len(tokens)-1].Type)
+}
+
+func TestUnknownCharacter(t *testing.T) {
+	tokens := New(`x = @`).Tokenize()
+	// Should produce: IDENT, ASSIGN, ILLEGAL("@"), EOF
+	require.True(t, len(tokens) >= 4)
+	assert.Equal(t, IDENT, tokens[0].Type)
+	assert.Equal(t, ASSIGN, tokens[1].Type)
+	assert.Equal(t, ILLEGAL, tokens[2].Type)
+	assert.Equal(t, "@", tokens[2].Value)
+}
+
+func TestUnknownCharacterTilde(t *testing.T) {
+	tokens := New(`~`).Tokenize()
+	require.Len(t, tokens, 2) // ILLEGAL + EOF
+	assert.Equal(t, ILLEGAL, tokens[0].Type)
+	assert.Equal(t, "~", tokens[0].Value)
+}
+
+func TestUnicodeIdentifiers(t *testing.T) {
+	assertTokens(t, `名前 = "hello"`, []Token{
+		{Type: IDENT, Value: "名前"},
+		{Type: ASSIGN, Value: "="},
+		{Type: STRING, Value: "hello"},
+	})
+}
+
+func TestUnicodeIdentifierWithDigits(t *testing.T) {
+	assertTokens(t, `café2 = 42`, []Token{
+		{Type: IDENT, Value: "café2"},
+		{Type: ASSIGN, Value: "="},
+		{Type: INT, Value: "42"},
+	})
+}
+
+func TestEmptyInput(t *testing.T) {
+	tokens := New("").Tokenize()
+	require.Len(t, tokens, 1)
+	assert.Equal(t, EOF, tokens[0].Type)
+}
+
+func TestOnlyWhitespace(t *testing.T) {
+	tokens := New("   \t\n  ").Tokenize()
+	require.Len(t, tokens, 1)
+	assert.Equal(t, EOF, tokens[0].Type)
+}

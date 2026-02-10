@@ -9,7 +9,8 @@ import (
 	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
-func (s *Server) textDocumentHover(ctx *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+func (s *Server) textDocumentHover(ctx *glsp.Context, params *protocol.HoverParams) (result *protocol.Hover, err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
 	content, ok := s.documents[uri]
 	if !ok {

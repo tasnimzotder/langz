@@ -88,7 +88,8 @@ var builtinSignatures = map[string]protocol.SignatureInformation{
 	},
 }
 
-func (s *Server) textDocumentSignatureHelp(ctx *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+func (s *Server) textDocumentSignatureHelp(ctx *glsp.Context, params *protocol.SignatureHelpParams) (result *protocol.SignatureHelp, err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
 	content, ok := s.documents[uri]
 	if !ok {

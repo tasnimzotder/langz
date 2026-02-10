@@ -32,6 +32,8 @@ func (g *Generator) genStatement(node ast.Node) {
 		g.genIndexAssignment(n)
 	case *ast.WhileStmt:
 		g.genWhile(n)
+	default:
+		g.writeln(fmt.Sprintf("# error: unhandled statement type %T", node))
 	}
 }
 

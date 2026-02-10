@@ -43,7 +43,12 @@ func (p *Parser) parseStatement() ast.Node {
 		return p.parseExpression()
 	case lexer.STRING, lexer.INT, lexer.TRUE, lexer.FALSE, lexer.BANG:
 		return p.parseExpression()
+	case lexer.ILLEGAL:
+		p.addError(p.current.Value)
+		p.advance()
+		return nil
 	default:
+		p.addError("unexpected token: " + string(p.current.Type))
 		p.advance()
 		return nil
 	}

@@ -69,8 +69,16 @@ func (p *Parser) expect(t lexer.TokenType) lexer.Token {
 }
 
 // ParseWithErrors parses tokens and returns the first error.
-func (p *Parser) ParseWithErrors() (*ast.Program, error) {
-	prog := &ast.Program{}
+func (p *Parser) ParseWithErrors() (prog *ast.Program, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if prog == nil {
+				prog = &ast.Program{}
+			}
+			err = fmt.Errorf("internal error: %v", r)
+		}
+	}()
+	prog = &ast.Program{}
 
 	for p.current.Type != lexer.EOF {
 		stmt := p.parseStatement()
@@ -88,8 +96,20 @@ func (p *Parser) ParseWithErrors() (*ast.Program, error) {
 
 // ParseAllErrors parses tokens and returns ALL structured errors.
 // The returned *ast.Program is always non-nil (partial program on errors).
-func (p *Parser) ParseAllErrors() (*ast.Program, []ParseError) {
-	prog := &ast.Program{}
+func (p *Parser) ParseAllErrors() (prog *ast.Program, errs []ParseError) {
+	defer func() {
+		if r := recover(); r != nil {
+			if prog == nil {
+				prog = &ast.Program{}
+			}
+			errs = append(errs, ParseError{
+				Line:    p.current.Line,
+				Col:     p.current.Col,
+				Message: fmt.Sprintf("internal error: %v", r),
+			})
+		}
+	}()
+	prog = &ast.Program{}
 
 	for p.current.Type != lexer.EOF {
 		stmt := p.parseStatement()

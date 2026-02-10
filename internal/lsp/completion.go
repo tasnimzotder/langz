@@ -7,9 +7,13 @@ import (
 	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
-func (s *Server) textDocumentCompletion(ctx *glsp.Context, params *protocol.CompletionParams) (any, error) {
+func (s *Server) textDocumentCompletion(ctx *glsp.Context, params *protocol.CompletionParams) (result any, err error) {
+	defer recoverErr(&err)
 	uri := params.TextDocument.URI
-	content := s.documents[uri]
+	content, ok := s.documents[uri]
+	if !ok {
+		return nil, nil
+	}
 	// LSP positions are 0-based; our token positions are 1-based
 	line := int(params.Position.Line) + 1
 	col := int(params.Position.Character) + 1

@@ -67,7 +67,7 @@ func (g *Generator) genExpr(node ast.Node) string {
 	case *ast.MapLiteral:
 		return g.genMapLiteral(n)
 	default:
-		return ""
+		return fmt.Sprintf("# error: unhandled expression type %T", node)
 	}
 }
 

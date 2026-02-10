@@ -8,9 +8,10 @@ import (
 	"github.com/tasnimzotder/langz/internal/parser"
 )
 
-// publishDiagnostics lexes+parses the source and sends diagnostics to the client.
-func (s *Server) publishDiagnostics(ctx *glsp.Context, uri protocol.DocumentUri, content string) {
-	diags := getDiagnostics(content)
+// publishDiagnostics uses cached tokens to parse and send diagnostics to the client.
+func (s *Server) publishDiagnostics(ctx *glsp.Context, uri protocol.DocumentUri, _ string) {
+	tokens := s.getTokens(uri)
+	diags := getDiagnosticsFromTokens(tokens)
 	ctx.Notify(protocol.ServerTextDocumentPublishDiagnostics, &protocol.PublishDiagnosticsParams{
 		URI:         uri,
 		Diagnostics: diags,
@@ -20,6 +21,11 @@ func (s *Server) publishDiagnostics(ctx *glsp.Context, uri protocol.DocumentUri,
 // getDiagnostics lexes + parses source, returns LSP diagnostics for all errors.
 func getDiagnostics(source string) []protocol.Diagnostic {
 	tokens := lexer.New(source).Tokenize()
+	return getDiagnosticsFromTokens(tokens)
+}
+
+// getDiagnosticsFromTokens parses pre-tokenized input and returns LSP diagnostics.
+func getDiagnosticsFromTokens(tokens []lexer.Token) []protocol.Diagnostic {
 	_, errs := parser.New(tokens).ParseAllErrors()
 
 	diags := make([]protocol.Diagnostic, 0, len(errs))

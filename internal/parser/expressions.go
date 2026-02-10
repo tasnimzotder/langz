@@ -168,7 +168,12 @@ func (p *Parser) parsePrimary() ast.Node {
 		p.advance()
 		return &ast.Identifier{Name: tok.Value}
 
+	case lexer.ILLEGAL:
+		p.addError(p.current.Value)
+		p.advance()
+		return nil
 	default:
+		p.addError("unexpected token: " + string(p.current.Type))
 		p.advance()
 		return nil
 	}
