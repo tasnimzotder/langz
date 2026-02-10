@@ -9,7 +9,20 @@ import (
 
 func compile(input string) string {
 	tokens := lexer.New(input).Tokenize()
-	prog := parser.New(tokens).Parse()
+	prog, err := parser.New(tokens).ParseWithErrors()
+	if err != nil {
+		panic(err.Error())
+	}
+	output, _ := Generate(prog)
+	return output
+}
+
+func compileWithErrors(input string) (string, []string) {
+	tokens := lexer.New(input).Tokenize()
+	prog, err := parser.New(tokens).ParseWithErrors()
+	if err != nil {
+		panic(err.Error())
+	}
 	return Generate(prog)
 }
 

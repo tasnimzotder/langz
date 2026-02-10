@@ -20,6 +20,8 @@ func interpolate(s string) string {
 func bashEscape(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
+	s = strings.ReplaceAll(s, "$", `\$`)
+	s = strings.ReplaceAll(s, "`", "\\`")
 	return s
 }
 
@@ -102,12 +104,26 @@ func (g *Generator) genPipeExpr(expr *ast.BinaryExpr) string {
 	}
 }
 
+// sanitizeMapKey replaces non-alphanumeric characters with underscores
+// so map keys produce valid Bash variable names.
+func sanitizeMapKey(key string) string {
+	var b strings.Builder
+	for _, ch := range key {
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' {
+			b.WriteRune(ch)
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	return b.String()
+}
+
 func (g *Generator) genIndexExpr(n *ast.IndexExpr) string {
 	obj := g.genVarName(n.Object)
 	switch idx := n.Index.(type) {
 	case *ast.StringLiteral:
 		// Map access with string key: config["host"] → "$config_host"
-		return fmt.Sprintf(`"$%s_%s"`, obj, idx.Value)
+		return fmt.Sprintf(`"$%s_%s"`, obj, sanitizeMapKey(idx.Value))
 	default:
 		// Array access: items[0] or items[i] → "${items[idx]}"
 		return fmt.Sprintf(`"${%s[%s]}"`, obj, g.genRawValue(n.Index))
@@ -198,7 +214,7 @@ func (g *Generator) genCondition(node ast.Node) string {
 		return fmt.Sprintf("[ %s %s %s ]", left, op, right)
 	case *ast.UnaryExpr:
 		if n.Op == "!" {
-			return fmt.Sprintf("[ ! %s ]", g.genConditionOperand(n.Operand))
+			return "! " + g.genCondition(n.Operand)
 		}
 		return g.genExpr(node)
 	case *ast.FuncCall:
@@ -239,8 +255,7 @@ func (g *Generator) genForCollection(node ast.Node) string {
 }
 
 func (g *Generator) genMapLiteral(m *ast.MapLiteral) string {
-	// Placeholder — will be implemented as declare -A
-	return ""
+	return "# error: map literals can only be used in assignments (e.g. config = {key: value})"
 }
 
 // genArithOperand produces unquoted values suitable for Bash $((...)).

@@ -178,3 +178,18 @@ func TestComplexArithmetic(t *testing.T) {
 
 	assert.Contains(t, output, `result=$((a * b + c * d))`)
 }
+
+func TestUnaryNegation(t *testing.T) {
+	output := body(compile(`if !ok { print("failed") }`))
+
+	// Should negate the boolean check, not just test string emptiness
+	assert.Contains(t, output, `! [`)
+	assert.Contains(t, output, `= true`)
+}
+
+func TestUnaryNegationComparison(t *testing.T) {
+	output := body(compile(`if !(x > 10) { print("small") }`))
+
+	// Should negate the comparison
+	assert.Contains(t, output, `! [`)
+}

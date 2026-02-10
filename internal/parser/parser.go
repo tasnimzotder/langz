@@ -68,16 +68,7 @@ func (p *Parser) expect(t lexer.TokenType) lexer.Token {
 	return tok
 }
 
-// Parse parses tokens into a program. Panics on errors (legacy).
-func (p *Parser) Parse() *ast.Program {
-	prog, err := p.ParseWithErrors()
-	if err != nil {
-		panic(err.Error())
-	}
-	return prog
-}
-
-// ParseWithErrors parses tokens and returns the first error (backwards-compatible).
+// ParseWithErrors parses tokens and returns the first error.
 func (p *Parser) ParseWithErrors() (*ast.Program, error) {
 	prog := &ast.Program{}
 

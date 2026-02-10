@@ -13,7 +13,8 @@ type Generator struct {
 }
 
 // Generate converts an AST program into a Bash script string.
-func Generate(prog *ast.Program) string {
+// Returns the generated Bash and any codegen errors found.
+func Generate(prog *ast.Program) (string, []string) {
 	g := &Generator{}
 	g.writeln("#!/bin/bash")
 	g.writeln("set -euo pipefail")
@@ -23,7 +24,21 @@ func Generate(prog *ast.Program) string {
 		g.genStatement(stmt)
 	}
 
-	return strings.TrimRight(g.buf.String(), "\n") + "\n"
+	output := strings.TrimRight(g.buf.String(), "\n") + "\n"
+	return output, findCodegenErrors(output)
+}
+
+// findCodegenErrors scans generated Bash for # error: markers
+// left by builtins that received invalid arguments.
+func findCodegenErrors(output string) []string {
+	var errs []string
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if idx := strings.Index(trimmed, "# error:"); idx >= 0 {
+			errs = append(errs, strings.TrimSpace(trimmed[idx+len("# error:"):]))
+		}
+	}
+	return errs
 }
 
 func (g *Generator) write(s string) {

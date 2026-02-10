@@ -7,5 +7,9 @@ import (
 
 func parse(input string) *ast.Program {
 	tokens := lexer.New(input).Tokenize()
-	return New(tokens).Parse()
+	prog, err := New(tokens).ParseWithErrors()
+	if err != nil {
+		panic(err.Error())
+	}
+	return prog
 }

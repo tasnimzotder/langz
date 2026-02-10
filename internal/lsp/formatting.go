@@ -27,7 +27,7 @@ func (s *Server) textDocumentFormatting(ctx *glsp.Context, params *protocol.Docu
 		}
 	}
 
-	formatted := formatSource(content, tabSize, insertSpaces)
+	formatted := FormatSource(content, tabSize, insertSpaces)
 	if formatted == content {
 		return nil, nil
 	}
@@ -48,7 +48,8 @@ func (s *Server) textDocumentFormatting(ctx *glsp.Context, params *protocol.Docu
 	}}, nil
 }
 
-func formatSource(source string, tabSize int, insertSpaces bool) string {
+// FormatSource re-indents LangZ source code.
+func FormatSource(source string, tabSize int, insertSpaces bool) string {
 	indent := "\t"
 	if insertSpaces {
 		indent = strings.Repeat(" ", tabSize)
@@ -87,6 +88,10 @@ func codePart(line string) string {
 	inString := false
 	for i := 0; i < len(line); i++ {
 		ch := line[i]
+		if inString && ch == '\\' && i+1 < len(line) {
+			i++ // skip escaped character
+			continue
+		}
 		if ch == '"' {
 			inString = !inString
 			continue

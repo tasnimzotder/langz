@@ -15,7 +15,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: langz <build|run|lsp> <file.lz>")
+		fmt.Fprintln(os.Stderr, "Usage: langz <build|run|fmt|lsp> <file.lz>")
 		os.Exit(1)
 	}
 
@@ -28,7 +28,7 @@ func main() {
 	}
 
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "Usage: langz <build|run> <file.lz>")
+		fmt.Fprintln(os.Stderr, "Usage: langz <build|run|fmt> <file.lz>")
 		os.Exit(1)
 	}
 
@@ -40,13 +40,32 @@ func main() {
 		os.Exit(1)
 	}
 
+	if command == "fmt" {
+		formatted := lsp.FormatSource(string(source), 4, true)
+		if formatted == string(source) {
+			return
+		}
+		if err := os.WriteFile(inputFile, []byte(formatted), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing %s: %v\n", inputFile, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Formatted %s\n", inputFile)
+		return
+	}
+
 	tokens := lexer.New(string(source)).Tokenize()
 	prog, parseErr := parser.New(tokens).ParseWithErrors()
 	if parseErr != nil {
-		fmt.Fprintf(os.Stderr, "%s: %v\n", inputFile, parseErr)
+		formatParseError(string(source), inputFile, parseErr)
 		os.Exit(1)
 	}
-	output := codegen.Generate(prog)
+	output, codegenErrors := codegen.Generate(prog)
+	if len(codegenErrors) > 0 {
+		for _, e := range codegenErrors {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", inputFile, e)
+		}
+		os.Exit(1)
+	}
 
 	switch command {
 	case "build":
@@ -66,7 +85,10 @@ func main() {
 		}
 		defer os.Remove(tmpFile.Name())
 
-		tmpFile.WriteString(output)
+		if _, err := tmpFile.WriteString(output); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing temp file: %v\n", err)
+			os.Exit(1)
+		}
 		tmpFile.Close()
 
 		cmd := exec.Command("bash", tmpFile.Name())
@@ -83,7 +105,36 @@ func main() {
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\nUsage: langz <build|run|lsp> <file.lz>\n", command)
+		fmt.Fprintf(os.Stderr, "Unknown command: %s\nUsage: langz <build|run|fmt|lsp> <file.lz>\n", command)
 		os.Exit(1)
+	}
+}
+
+// formatParseError prints a parse error with source context and a ^ pointer.
+func formatParseError(source string, inputFile string, parseErr error) {
+	// Try to extract line/col from the structured error format
+	var line, col int
+	var msg string
+	_, scanErr := fmt.Sscanf(parseErr.Error(), "line %d, col %d: ", &line, &col)
+	if scanErr != nil {
+		// Fallback: just print the raw error
+		fmt.Fprintf(os.Stderr, "%s: %v\n", inputFile, parseErr)
+		return
+	}
+
+	// Extract the message after "line X, col Y: "
+	errStr := parseErr.Error()
+	if idx := strings.Index(errStr, ": "); idx >= 0 {
+		msg = errStr[idx+2:]
+	}
+
+	lines := strings.Split(source, "\n")
+	fmt.Fprintf(os.Stderr, "%s:%d:%d: %s\n", inputFile, line, col, msg)
+	if line >= 1 && line <= len(lines) {
+		srcLine := lines[line-1]
+		fmt.Fprintf(os.Stderr, "  %s\n", srcLine)
+		if col >= 1 && col <= len(srcLine)+1 {
+			fmt.Fprintf(os.Stderr, "  %s^\n", strings.Repeat(" ", col-1))
+		}
 	}
 }

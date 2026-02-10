@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPreamble(t *testing.T) {
@@ -81,4 +82,43 @@ func TestMapLiteralCodegen(t *testing.T) {
 
 	assert.Contains(t, output, `config_port=8080`)
 	assert.Contains(t, output, `config_host="localhost"`)
+}
+
+func TestStringDollarEscaping(t *testing.T) {
+	output := body(compile(`print("Cost: $100")`))
+
+	assert.Equal(t, `echo "Cost: \$100"`, output)
+}
+
+func TestStringBacktickEscaping(t *testing.T) {
+	output := body(compile("print(\"`whoami`\")"))
+
+	assert.Equal(t, "echo \"\\`whoami\\`\"", output)
+}
+
+func TestRawValueEscaping(t *testing.T) {
+	output := body(compile(`chmod("file.txt", "755")`))
+
+	assert.Contains(t, output, `chmod 755`)
+	assert.NotContains(t, output, `;`)
+}
+
+func TestMapKeySanitization(t *testing.T) {
+	output := body(compile(`x = config["my-key"]`))
+
+	// Hyphens in map keys should be sanitized to underscores
+	assert.Contains(t, output, `config_my_key`)
+}
+
+func TestCodegenErrorDetection(t *testing.T) {
+	_, errs := compileWithErrors(`write("file.txt")`)
+
+	require.Len(t, errs, 1)
+	assert.Contains(t, errs[0], "write()")
+}
+
+func TestCodegenNoErrorOnValidCode(t *testing.T) {
+	_, errs := compileWithErrors(`print("hello")`)
+
+	assert.Empty(t, errs)
 }

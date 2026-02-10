@@ -59,7 +59,7 @@ func (g *Generator) genAssignment(a *ast.Assignment) {
 
 func (g *Generator) genMapAssignment(name string, m *ast.MapLiteral) {
 	for i, key := range m.Keys {
-		g.writeln(fmt.Sprintf("%s_%s=%s", name, key, g.genExpr(m.Values[i])))
+		g.writeln(fmt.Sprintf("%s_%s=%s", name, sanitizeMapKey(key), g.genExpr(m.Values[i])))
 	}
 }
 
@@ -231,7 +231,7 @@ func (g *Generator) genIndexAssignment(n *ast.IndexAssignment) {
 	val := g.genExpr(n.Value)
 	if strIdx, ok := n.Index.(*ast.StringLiteral); ok {
 		// Map assignment: config["host"] = "new" → config_host="new"
-		g.writeln(fmt.Sprintf(`%s_%s=%s`, n.Object, strIdx.Value, val))
+		g.writeln(fmt.Sprintf(`%s_%s=%s`, n.Object, sanitizeMapKey(strIdx.Value), val))
 	} else {
 		// Array assignment: items[0] = "new" → items[0]="new"
 		idx := g.genRawValue(n.Index)

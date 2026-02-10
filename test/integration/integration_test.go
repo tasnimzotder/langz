@@ -33,7 +33,8 @@ func compileSource(t *testing.T, source string) string {
 	tokens := lexer.New(source).Tokenize()
 	prog, err := parser.New(tokens).ParseWithErrors()
 	require.NoError(t, err, "parse error")
-	return codegen.Generate(prog)
+	output, _ := codegen.Generate(prog)
+	return output
 }
 
 func runBash(t *testing.T, script string) (string, int) {
