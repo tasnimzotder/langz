@@ -1,6 +1,8 @@
 package lsp
 
 import (
+	"fmt"
+
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 
@@ -27,11 +29,42 @@ func (s *Server) textDocumentHover(ctx *glsp.Context, params *protocol.HoverPara
 		return nil, nil
 	}
 
-	doc, ok := builtinDocs[token.Value]
-	if !ok {
+	hover := getHoverAt(content, line, col)
+	if hover == nil {
 		return nil, nil
 	}
+	return hover, nil
+}
 
+// getHoverAt returns hover information for the token at the given 1-based position.
+func getHoverAt(source string, line, col int) *protocol.Hover {
+	token := findTokenAt(source, line, col)
+	if token == nil || token.Type != lexer.IDENT {
+		return nil
+	}
+
+	// Check builtin docs first
+	if doc, ok := builtinDocs[token.Value]; ok {
+		return makeHover(doc, token)
+	}
+
+	// Check if this is a kwarg: IDENT followed by COLON
+	if isKwarg(source, token) {
+		funcName, _ := findEnclosingFuncCall(source, line, col)
+		if kwargs, ok := builtinKwargs[funcName]; ok {
+			for _, kw := range kwargs {
+				if kw.Name == token.Value {
+					doc := fmt.Sprintf("**%s:** %s", kw.Name, kw.Desc)
+					return makeHover(doc, token)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func makeHover(doc string, token *lexer.Token) *protocol.Hover {
 	return &protocol.Hover{
 		Contents: protocol.MarkupContent{
 			Kind:  protocol.MarkupKindMarkdown,
@@ -47,7 +80,22 @@ func (s *Server) textDocumentHover(ctx *glsp.Context, params *protocol.HoverPara
 				Character: protocol.UInteger(token.Col - 1 + len(token.Value)),
 			},
 		},
-	}, nil
+	}
+}
+
+// isKwarg checks if the given IDENT token is followed by a COLON in the token stream.
+func isKwarg(source string, target *lexer.Token) bool {
+	tokens := lexer.New(source).Tokenize()
+	for i := range tokens {
+		t := &tokens[i]
+		if t.Line == target.Line && t.Col == target.Col && t.Type == lexer.IDENT {
+			if i+1 < len(tokens) && tokens[i+1].Type == lexer.COLON {
+				return true
+			}
+			return false
+		}
+	}
+	return false
 }
 
 // findTokenAt returns the token at the given 1-based line and column,

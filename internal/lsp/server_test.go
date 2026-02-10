@@ -86,7 +86,8 @@ func TestBuiltinDocsCompleteness(t *testing.T) {
 		"copy", "move", "chmod", "glob", "exists", "is_file", "is_dir",
 		"exec", "exit", "env", "os", "arch", "hostname", "whoami",
 		"dirname", "basename", "upper", "lower", "fetch", "args",
-		"range", "sleep",
+		"range", "sleep", "json_get", "len", "trim", "timestamp",
+		"date", "chown",
 	}
 	for _, name := range expected {
 		_, ok := builtinDocs[name]
@@ -99,6 +100,24 @@ func TestBuiltinDocsContainSignature(t *testing.T) {
 	for name, doc := range builtinDocs {
 		assert.Contains(t, doc, name, "doc for %s should contain the function name", name)
 	}
+}
+
+// --- Kwarg docs ---
+
+func TestBuiltinKwargsHasEntries(t *testing.T) {
+	kwargs, ok := builtinKwargs["fetch"]
+	require.True(t, ok, "fetch should have kwargs")
+	assert.Len(t, kwargs, 5)
+
+	names := make([]string, len(kwargs))
+	for i, kw := range kwargs {
+		names[i] = kw.Name
+	}
+	assert.Contains(t, names, "method")
+	assert.Contains(t, names, "body")
+	assert.Contains(t, names, "headers")
+	assert.Contains(t, names, "timeout")
+	assert.Contains(t, names, "retries")
 }
 
 // --- Server ---

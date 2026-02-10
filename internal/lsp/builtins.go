@@ -42,12 +42,37 @@ var builtinDocs = map[string]string{
 	// String utilities
 	"upper": "```\nupper(str) -> string\n```\nConvert string to uppercase.\n\nTranspiles to `$(echo str | tr '[:lower:]' '[:upper:]')`.",
 	"lower": "```\nlower(str) -> string\n```\nConvert string to lowercase.\n\nTranspiles to `$(echo str | tr '[:upper:]' '[:lower:]')`.",
+	"trim": "```\ntrim(str) -> string\n```\nTrim leading/trailing whitespace.\n\nTranspiles to `$(echo str | xargs)`.",
+	"len": "```\nlen(list) -> int\n```\nGet the length of a list.\n\nTranspiles to `${#list[@]}`.",
 
 	// Networking
-	"fetch": "```\nfetch(url) -> string\n```\nHTTP GET a URL.\n\nTranspiles to `$(curl -sf url)`.",
+	"fetch": "```\nfetch(url, method:, body:, headers:, timeout:, retries:) -> string\n```\nHTTP request via curl. Sets convention variables:\n- `_status` — HTTP status code\n- `_body` — response body\n- `_headers` — response headers\n\nSupports `or` fallback: `data = fetch(url) or \"default\"`\n\nTranspiles to multi-line `curl` with tmpfile handling.",
+	"json_get": "```\njson_get(data, path) -> string\n```\nExtract a value from JSON using a jq path.\n\nRequires `jq`. Transpiles to `$(echo data | jq -r path)`.",
+
+	// Date/time
+	"timestamp": "```\ntimestamp() -> string\n```\nGet current Unix timestamp.\n\nTranspiles to `$(date +%s)`.",
+	"date": "```\ndate() -> string\n```\nGet current date (YYYY-MM-DD).\n\nTranspiles to `$(date +\"%Y-%m-%d\")`.",
 
 	// Misc
 	"args":  "```\nargs() -> list\n```\nGet script arguments.\n\nTranspiles to `(\"$@\")`.",
 	"range": "```\nrange(start, end) -> list\n```\nGenerate a numeric sequence.\n\nTranspiles to `$(seq start end)`.",
 	"sleep": "```\nsleep(seconds)\n```\nPause execution for N seconds.\n\nTranspiles to `sleep N`.",
+	"chown": "```\nchown(path, owner)\n```\nChange file owner.\n\nTranspiles to `chown owner path`.",
+}
+
+// kwargDoc describes a single keyword argument for a builtin function.
+type kwargDoc struct {
+	Name string
+	Desc string
+}
+
+// builtinKwargs maps function names to their supported keyword arguments.
+var builtinKwargs = map[string][]kwargDoc{
+	"fetch": {
+		{Name: "method", Desc: "HTTP method (GET, POST, PUT, PATCH, DELETE)"},
+		{Name: "body", Desc: "Request body data"},
+		{Name: "headers", Desc: "Request headers as map, e.g. `{\"Content-Type\": \"application/json\"}`"},
+		{Name: "timeout", Desc: "Max seconds to wait for response"},
+		{Name: "retries", Desc: "Number of retry attempts on failure"},
+	},
 }

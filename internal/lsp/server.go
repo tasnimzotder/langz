@@ -31,6 +31,7 @@ func NewServer() *Server {
 	s.handler.TextDocumentDidChange = s.textDocumentDidChange
 	s.handler.TextDocumentDidClose = s.textDocumentDidClose
 	s.handler.TextDocumentHover = s.textDocumentHover
+	s.handler.TextDocumentSignatureHelp = s.textDocumentSignatureHelp
 	s.handler.TextDocumentCompletion = s.textDocumentCompletion
 	s.handler.TextDocumentDefinition = s.textDocumentDefinition
 	s.handler.TextDocumentDocumentSymbol = s.textDocumentDocumentSymbol
@@ -52,6 +53,10 @@ func (s *Server) initialize(ctx *glsp.Context, params *protocol.InitializeParams
 	syncKind := protocol.TextDocumentSyncKindFull
 	capabilities.TextDocumentSync = syncKind
 	capabilities.CompletionProvider = &protocol.CompletionOptions{}
+	capabilities.SignatureHelpProvider = &protocol.SignatureHelpOptions{
+		TriggerCharacters:   []string{"(", ","},
+		RetriggerCharacters: []string{",", " "},
+	}
 	capabilities.DefinitionProvider = true
 	capabilities.DocumentSymbolProvider = true
 	capabilities.DocumentFormattingProvider = true

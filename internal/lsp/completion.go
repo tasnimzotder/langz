@@ -10,10 +10,13 @@ import (
 func (s *Server) textDocumentCompletion(ctx *glsp.Context, params *protocol.CompletionParams) (any, error) {
 	uri := params.TextDocument.URI
 	content := s.documents[uri]
-	return getCompletionItems(content), nil
+	// LSP positions are 0-based; our token positions are 1-based
+	line := int(params.Position.Line) + 1
+	col := int(params.Position.Character) + 1
+	return getCompletionItems(content, line, col), nil
 }
 
-func getCompletionItems(source string) []protocol.CompletionItem {
+func getCompletionItems(source string, line, col int) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 	seen := make(map[string]bool)
 
@@ -41,6 +44,25 @@ func getCompletionItems(source string) []protocol.CompletionItem {
 			Label: kw,
 			Kind:  &kind,
 		})
+	}
+
+	// Context-aware kwargs — only when cursor is inside a function call
+	if funcName, _ := findEnclosingFuncCall(source, line, col); funcName != "" {
+		if kwargs, ok := builtinKwargs[funcName]; ok {
+			for _, kw := range kwargs {
+				label := kw.Name + ":"
+				if seen[label] {
+					continue
+				}
+				seen[label] = true
+				kind := protocol.CompletionItemKindProperty
+				items = append(items, protocol.CompletionItem{
+					Label:         label,
+					Kind:          &kind,
+					Documentation: kw.Desc,
+				})
+			}
+		}
 	}
 
 	// User-defined symbols
