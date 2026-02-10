@@ -62,41 +62,58 @@ ln -s /path/to/langz/editors/nvim ~/.vim/pack/langz/start/langz
 
 ### LSP Setup (Neovim)
 
-Add this to your Neovim config (e.g. `~/.config/nvim/init.lua` or in `after/ftplugin/langz.lua`):
+**Neovim 0.11+ with LazyVim** (recommended):
 
-**With `nvim-lspconfig` (custom server):**
+Add a plugin spec to your LazyVim config (e.g. `~/.config/nvim/lua/plugins/langz.lua`):
 
 ```lua
-local lspconfig = require("lspconfig")
-local configs = require("lspconfig.configs")
+return {
+  {
+    dir = "~/path/to/langz/editors/nvim",
+    ft = "langz",
+  },
+  {
+    "neovim/nvim-lspconfig",
+    opts = {
+      servers = {
+        langz = {
+          cmd = { "langz", "lsp" },
+          filetypes = { "langz" },
+          root_markers = { ".git" },
+          mason = false,
+        },
+      },
+    },
+  },
+}
+```
 
+**Neovim 0.11+ without LazyVim:**
+
+```lua
+vim.lsp.config("langz", {
+  cmd = { "langz", "lsp" },
+  filetypes = { "langz" },
+  root_markers = { ".git" },
+})
+vim.lsp.enable("langz")
+```
+
+**Neovim < 0.11 with `nvim-lspconfig`:**
+
+```lua
+local configs = require("lspconfig.configs")
 if not configs.langz then
   configs.langz = {
     default_config = {
       cmd = { "langz", "lsp" },
       filetypes = { "langz" },
-      root_dir = lspconfig.util.find_git_ancestor,
+      root_dir = require("lspconfig").util.find_git_ancestor,
       single_file_support = true,
     },
   }
 end
-
-lspconfig.langz.setup({})
-```
-
-**Without `nvim-lspconfig`:**
-
-```lua
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "langz",
-  callback = function()
-    vim.lsp.start({
-      name = "langz",
-      cmd = { "langz", "lsp" },
-      root_dir = vim.fs.root(0, { ".git" }),
-    })
-  end,
-})
+require("lspconfig").langz.setup({})
 ```
 
 ### LSP Setup (Vim)
