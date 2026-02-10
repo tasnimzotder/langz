@@ -51,6 +51,13 @@ match env_name {
     _ => log("Unknown environment: {env_name}")
 }
 
+// Use bash escape for shell-specific deployment logic
+bash {
+    if command -v tar >/dev/null 2>&1; then
+        echo "[deploy] tar available for packaging"
+    fi
+}
+
 // Verify build output
 if is_dir("dist") {
     log("Build directory ready")

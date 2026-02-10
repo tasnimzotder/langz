@@ -27,6 +27,10 @@ func (p *Parser) parseStatement() ast.Node {
 		return &ast.BreakStmt{}
 	case lexer.WHILE:
 		return p.parseWhile()
+	case lexer.BASH:
+		return p.parseBashBlock()
+	case lexer.IMPORT:
+		return p.parseImport()
 	case lexer.IDENT:
 		if p.peek().Type == lexer.ASSIGN {
 			return p.parseAssignment()
@@ -268,4 +272,16 @@ func (p *Parser) parseReturn() *ast.ReturnStmt {
 	}
 
 	return &ast.ReturnStmt{Value: value}
+}
+
+func (p *Parser) parseBashBlock() *ast.BashBlock {
+	p.expect(lexer.BASH)
+	content := p.expect(lexer.BASH_CONTENT)
+	return &ast.BashBlock{Content: content.Value}
+}
+
+func (p *Parser) parseImport() *ast.ImportStmt {
+	p.expect(lexer.IMPORT)
+	path := p.expect(lexer.STRING)
+	return &ast.ImportStmt{Path: path.Value}
 }

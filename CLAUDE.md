@@ -4,14 +4,14 @@ Scripting language that transpiles to Bash. Go module: `github.com/tasnimzotder/
 
 ## Commands
 
-- `gotestsum -- ./...` — run all tests (367 total)
+- `gotestsum -- ./...` — run all tests (393 total)
 - `gotestsum -- -run TestName ./path/` — run specific test
 - `go build ./...` — verify compilation
 - `go install ./cmd/langz` — install CLI binary
 
 ## Architecture
 
-Pipeline: Source (.lz) → Lexer → Parser (recursive descent) → Codegen → Bash
+Pipeline: Source (.lz) → Lexer → Parser (recursive descent) → Import Resolution → Codegen → Bash
 
 ## Project Layout
 
@@ -34,6 +34,10 @@ Pipeline: Source (.lz) → Lexer → Parser (recursive descent) → Codegen → 
 
 ## Error Handling Architecture
 
+- **Shebang** lines (`#!...`) are skipped by the lexer; CLI auto-detects `.lz` files as first arg
+- **Bash blocks** (`bash { ... }`) are lexed with brace-depth tracking into `BASH_CONTENT` tokens
+- **Imports** (`import "path.lz"`) are resolved in the CLI via `resolveImports()` before codegen (with circular import detection)
+- **Multi-error reporting** via `ParseAllErrors()` with cap at 10 errors shown
 - **Lexer** emits `ILLEGAL` tokens for unterminated strings and unknown characters (never silently skips)
 - **Parser** reports errors for `ILLEGAL` tokens and unexpected token types via `p.addError()`
 - **Codegen** emits `# error:` comment markers for unhandled AST nodes; `findCodegenErrors()` scans output for these

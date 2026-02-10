@@ -226,3 +226,17 @@ func (w *WhileStmt) nodeType() string { return "WhileStmt" }
 type BreakStmt struct{}
 
 func (b *BreakStmt) nodeType() string { return "BreakStmt" }
+
+// BashBlock: bash { raw content }
+type BashBlock struct {
+	Content string
+}
+
+func (b *BashBlock) nodeType() string { return "BashBlock" }
+
+// ImportStmt: import "path.lz"
+type ImportStmt struct {
+	Path string
+}
+
+func (i *ImportStmt) nodeType() string { return "ImportStmt" }

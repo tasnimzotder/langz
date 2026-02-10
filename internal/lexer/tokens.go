@@ -56,6 +56,10 @@ const (
 	CONTINUE TokenType = "CONTINUE"
 	BREAK    TokenType = "BREAK"
 	WHILE    TokenType = "WHILE"
+	BASH     TokenType = "BASH"
+	IMPORT   TokenType = "IMPORT"
+
+	BASH_CONTENT TokenType = "BASH_CONTENT"
 
 	EOF     TokenType = "EOF"
 	ILLEGAL TokenType = "ILLEGAL"
@@ -76,6 +80,8 @@ var keywords = map[string]TokenType{
 	"continue": CONTINUE,
 	"break":    BREAK,
 	"while":    WHILE,
+	"bash":     BASH,
+	"import":   IMPORT,
 }
 
 // KeywordNames returns all keyword strings.

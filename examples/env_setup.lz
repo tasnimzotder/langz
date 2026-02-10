@@ -1,0 +1,41 @@
+#!/usr/bin/env langz
+// env_setup.lz — Dev environment setup script
+
+fn log(msg: str) {
+    print("[setup] {msg}")
+}
+
+platform = os()
+user = whoami()
+
+log("Setting up dev environment for {user} on {platform}")
+
+// Create project directories
+dirs = ["src", "build", "test", "docs"]
+for dir in dirs {
+    mkdir(dir)
+    log("Created {dir}/")
+}
+
+// Check required tools
+tools = ["git", "make", "curl"]
+for tool in tools {
+    bash {
+        if command -v "$tool" &>/dev/null; then
+            echo "[setup] Found: $tool"
+        else
+            echo "[setup] Missing: $tool"
+        fi
+    }
+}
+
+// Set up config
+if !exists(".env") {
+    write(".env", "APP_ENV=development")
+    append(".env", "DEBUG=true")
+    log("Created .env with defaults")
+} else {
+    log(".env already exists, skipping")
+}
+
+log("Setup complete!")

@@ -121,3 +121,34 @@ for f in glob("*.txt") {
     print(content)
 }
 ```
+
+## Raw Bash Blocks
+
+For shell-specific logic without a LangZ equivalent, use `bash { }` to embed raw Bash:
+
+```
+bash {
+    set -euo pipefail
+    trap 'cleanup' EXIT
+}
+```
+
+Content is emitted verbatim into the generated script. Nested braces are handled correctly:
+
+```
+bash {
+    if command -v docker &>/dev/null; then
+        echo "Docker is installed"
+    else
+        echo "Docker not found"
+    fi
+}
+```
+
+You can mix bash blocks with regular LangZ code:
+
+```
+name = "deploy"
+bash { echo "Running: $name" }
+print("Done with {name}")
+```

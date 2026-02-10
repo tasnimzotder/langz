@@ -16,6 +16,9 @@ Bash is powerful but hard to read and write correctly. LangZ gives you:
 - **Built-in DevOps functions** -- file ops, system info, HTTP requests, JSON parsing
 - **Safe defaults** -- generates `set -euo pipefail` automatically
 - **Zero runtime** -- compiles to plain Bash, nothing to install on target
+- **Imports** -- split code across files with `import "lib.lz"`
+- **Bash escape hatch** -- embed raw shell with `bash { ... }` when needed
+- **Shebang support** -- `#!/usr/bin/env langz` for directly executable scripts
 
 ## Quick Example
 

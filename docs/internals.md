@@ -5,14 +5,15 @@ How LangZ works under the hood.
 ## Compilation Pipeline
 
 ```
-Source (.lz) → Lexer → Parser → AST → Codegen → Bash (.sh)
+Source (.lz) → Lexer → Parser → AST → Import Resolution → Codegen → Bash (.sh)
 ```
 
 | Stage | Description |
 |-------|-------------|
-| **Lexer** | Tokenizes source into tokens (identifiers, strings, operators, keywords). Emits `ILLEGAL` tokens for malformed input. Supports unicode identifiers |
-| **Parser** | Recursive descent parser builds an Abstract Syntax Tree. Reports structured errors for invalid tokens |
-| **Codegen** | Walks the AST and emits Bash code. Marks unhandled nodes with `# error:` comments |
+| **Lexer** | Tokenizes source into tokens (identifiers, strings, operators, keywords). Skips shebang lines (`#!...`). Captures `bash { }` blocks as raw `BASH_CONTENT` tokens with brace-depth tracking. Emits `ILLEGAL` tokens for malformed input. Supports unicode identifiers |
+| **Parser** | Recursive descent parser builds an Abstract Syntax Tree. Reports structured errors for invalid tokens. Supports `ParseAllErrors()` for multi-error reporting |
+| **Import Resolution** | CLI walks the AST, finds `ImportStmt` nodes, reads/lexes/parses imported files, and prepends their statements. Detects circular imports via a visited set. Codegen never touches the filesystem |
+| **Codegen** | Walks the AST and emits Bash code. `BashBlock` content is emitted verbatim. `ImportStmt` nodes are skipped (already resolved). Marks unhandled nodes with `# error:` comments |
 
 ## Project Structure
 
@@ -64,6 +65,22 @@ Built-in functions are registered in maps (`stmtBuiltins`, `exprBuiltins`) with 
 
 `fetch()` sets `_status`, `_body`, `_headers` as global variables. This avoids the need for structured return types while keeping the API simple.
 
+### Shebang Handling
+
+Shebang lines (`#!/usr/bin/env langz`) are skipped in the lexer, not the parser. This means all consumers (CLI, LSP, tests) get the right behavior without special-casing. The CLI also auto-detects `.lz` files as `argv[1]` so shebang execution works (`./script.lz`).
+
+### Bash Blocks
+
+`bash { }` blocks use a special lexer mode. After the `BASH` keyword, the lexer switches to `readBashContent()` which tracks brace depth (depth=1 on entry, +1 on `{`, -1 on `}`), respects string literals and comments to avoid false matches, and returns the raw content as a single `BASH_CONTENT` token. The parser just wraps this into a `BashBlock` AST node, and codegen emits it verbatim.
+
+### Import Resolution in CLI
+
+Imports are resolved in the CLI, not in codegen. This keeps codegen pure (no filesystem access). The `resolveImports()` function walks the AST, finds `ImportStmt` nodes, reads/lexes/parses imported files, and prepends their statements. A `visited` set detects circular imports. This is essentially a pre-codegen AST rewriting pass.
+
+### Multi-Error Reporting
+
+The CLI uses `ParseAllErrors()` instead of `ParseWithErrors()` and displays all errors with source context (file:line:col, source line, ^ pointer). Errors are capped at 10 to avoid flooding the terminal.
+
 ### Token-Based LSP
 
 The LSP server uses token streams (not AST) for hover, completion, and definition. This avoids needing position tracking in the AST and keeps the LSP implementation simple and robust.
@@ -73,6 +90,13 @@ The server caches tokenized output per document (`Server.tokens` map), populated
 ## Error Handling Architecture
 
 Errors are handled at each pipeline stage, forming layered protection:
+
+### Lexer: Shebang and Bash Blocks
+
+The lexer handles two special cases before normal tokenization:
+
+- **Shebang**: If input starts with `#!`, the entire first line is skipped
+- **Bash blocks**: After the `BASH` keyword, the lexer enters `readBashContent()` mode, tracking brace depth and respecting string/comment boundaries to capture raw content as a `BASH_CONTENT` token
 
 ### Lexer: ILLEGAL Tokens
 

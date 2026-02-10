@@ -430,3 +430,65 @@ func TestOnlyWhitespace(t *testing.T) {
 	require.Len(t, tokens, 1)
 	assert.Equal(t, EOF, tokens[0].Type)
 }
+
+func TestShebangSkipped(t *testing.T) {
+	assertTokens(t, "#!/usr/bin/env langz\nprint(\"hi\")", []Token{
+		{Type: IDENT, Value: "print"},
+		{Type: LPAREN, Value: "("},
+		{Type: STRING, Value: "hi"},
+		{Type: RPAREN, Value: ")"},
+	})
+}
+
+func TestShebangOnlyFile(t *testing.T) {
+	tokens := New("#!/usr/bin/env langz\n").Tokenize()
+	require.Len(t, tokens, 1)
+	assert.Equal(t, EOF, tokens[0].Type)
+}
+
+func TestNoShebang(t *testing.T) {
+	// # without ! is not a shebang — should produce ILLEGAL
+	tokens := New("# not a shebang").Tokenize()
+	assert.Equal(t, ILLEGAL, tokens[0].Type)
+}
+
+func TestBashBlockSimple(t *testing.T) {
+	tokens := New(`bash { echo "hello" }`).Tokenize()
+	require.True(t, len(tokens) >= 3)
+	assert.Equal(t, BASH, tokens[0].Type)
+	assert.Equal(t, BASH_CONTENT, tokens[1].Type)
+	assert.Equal(t, `echo "hello"`, tokens[1].Value)
+	assert.Equal(t, EOF, tokens[2].Type)
+}
+
+func TestBashBlockMultiline(t *testing.T) {
+	input := "bash {\n    set -euo pipefail\n    trap 'cleanup' EXIT\n}"
+	tokens := New(input).Tokenize()
+	require.True(t, len(tokens) >= 3)
+	assert.Equal(t, BASH, tokens[0].Type)
+	assert.Equal(t, BASH_CONTENT, tokens[1].Type)
+	assert.Contains(t, tokens[1].Value, "set -euo pipefail")
+	assert.Contains(t, tokens[1].Value, "trap 'cleanup' EXIT")
+}
+
+func TestBashBlockNestedBraces(t *testing.T) {
+	input := "bash {\n    if [ -f file ]; then\n        echo \"found\"\n    fi\n}"
+	tokens := New(input).Tokenize()
+	assert.Equal(t, BASH_CONTENT, tokens[1].Type)
+	assert.Contains(t, tokens[1].Value, "if [ -f file ]")
+}
+
+func TestImportToken(t *testing.T) {
+	assertTokens(t, `import "helpers.lz"`, []Token{
+		{Type: IMPORT, Value: "import"},
+		{Type: STRING, Value: "helpers.lz"},
+	})
+}
+
+func TestBashKeyword(t *testing.T) {
+	// bash without braces just emits the keyword
+	tokens := New(`bash`).Tokenize()
+	require.Len(t, tokens, 2)
+	assert.Equal(t, BASH, tokens[0].Type)
+	assert.Equal(t, EOF, tokens[1].Type)
+}

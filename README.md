@@ -49,6 +49,18 @@ Compile or run directly:
 ```bash
 langz build deploy.lz   # generates deploy.sh
 langz run deploy.lz     # compile and execute
+langz deploy.lz         # auto-detect .lz file, same as "run"
+```
+
+Or make it executable with a shebang:
+
+```bash
+#!/usr/bin/env langz
+print("Hello from LangZ!")
+```
+
+```bash
+chmod +x script.lz && ./script.lz
 ```
 
 ## Language Features
@@ -198,6 +210,46 @@ if a + b > 10 {
 }
 ```
 
+### Imports
+
+Split code across files:
+
+```
+// helpers.lz
+fn greet(name: str) {
+    print("Hello {name}")
+}
+```
+
+```
+// main.lz
+import "helpers.lz"
+greet("world")
+```
+
+Paths are resolved relative to the importing file. Circular imports are detected and reported as errors.
+
+### Raw Bash Escape
+
+For one-off shell commands without a LangZ equivalent, use `bash { }`:
+
+```
+bash {
+    set -euo pipefail
+    trap 'cleanup' EXIT
+}
+```
+
+Content inside `bash { }` is emitted verbatim into the generated script. Nested braces in bash code (like `if/then` blocks) are handled correctly.
+
+```
+bash {
+    if command -v docker &>/dev/null; then
+        echo "Docker available"
+    fi
+}
+```
+
 ## Built-in Functions
 
 ### I/O
@@ -339,6 +391,13 @@ match env_name {
     "production" => log("PRODUCTION deploy")
     "staging"    => log("Staging deploy")
     _            => log("Unknown: {env_name}")
+}
+
+// Use bash escape for shell-specific logic
+bash {
+    if command -v tar >/dev/null 2>&1; then
+        echo "[deploy] tar available for packaging"
+    fi
 }
 
 log("Done!")

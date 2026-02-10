@@ -1,0 +1,34 @@
+#!/usr/bin/env langz
+// docker_cleanup.lz — Remove dangling Docker images and stopped containers
+
+fn log(msg: str) {
+    print("[docker] {msg}")
+}
+
+log("Docker cleanup starting")
+
+// Remove stopped containers
+log("Removing stopped containers...")
+bash {
+    stopped=$(docker ps -aq --filter "status=exited" 2>/dev/null || echo "")
+    if [ -n "$stopped" ]; then
+        docker rm $stopped
+        echo "[docker] Removed stopped containers"
+    else
+        echo "[docker] No stopped containers"
+    fi
+}
+
+// Remove dangling images
+log("Removing dangling images...")
+bash {
+    dangling=$(docker images -q --filter "dangling=true" 2>/dev/null || echo "")
+    if [ -n "$dangling" ]; then
+        docker rmi $dangling
+        echo "[docker] Removed dangling images"
+    else
+        echo "[docker] No dangling images"
+    fi
+}
+
+log("Cleanup complete")

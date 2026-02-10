@@ -43,7 +43,47 @@ echo "Hello ${name}!"
 langz run hello.lz
 ```
 
-This compiles and executes in one step.
+This compiles and executes in one step. You can also omit the `run` subcommand:
+
+```bash
+langz hello.lz
+```
+
+### Shebang Support
+
+Add a shebang line to make `.lz` files directly executable:
+
+```
+#!/usr/bin/env langz
+name = "World"
+print("Hello {name}!")
+```
+
+```bash
+chmod +x hello.lz
+./hello.lz
+```
+
+The shebang line is automatically skipped by the compiler.
+
+## Imports
+
+Split code across files using `import`:
+
+```
+// lib/helpers.lz
+fn greet(name: str) {
+    print("Hello {name}")
+}
+```
+
+```
+// main.lz
+import "lib/helpers.lz"
+greet("world")
+```
+
+Import paths are resolved relative to the importing file. Circular imports are detected and reported as errors.
 
 ## File Extension
 

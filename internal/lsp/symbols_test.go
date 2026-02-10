@@ -59,9 +59,11 @@ func TestFindSymbolsEmpty(t *testing.T) {
 
 func TestKeywordNames(t *testing.T) {
 	names := lexer.KeywordNames()
-	assert.Len(t, names, 14)
+	assert.Len(t, names, 16)
 	assert.Contains(t, names, "if")
 	assert.Contains(t, names, "fn")
 	assert.Contains(t, names, "while")
 	assert.Contains(t, names, "or")
+	assert.Contains(t, names, "bash")
+	assert.Contains(t, names, "import")
 }

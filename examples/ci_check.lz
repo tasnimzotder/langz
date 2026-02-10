@@ -1,0 +1,31 @@
+#!/usr/bin/env langz
+// ci_check.lz — Run linter and tests in CI
+
+fn log(msg: str) {
+    print("[CI] {msg}")
+}
+
+log("Starting CI checks")
+
+// Run linter
+log("Running linter...")
+bash {
+    if command -v golangci-lint &>/dev/null; then
+        echo "[CI] Linter available"
+    else
+        echo "[CI] Linter not found, skipping"
+    fi
+}
+
+// Run tests
+log("Running tests...")
+result = exec("echo PASS") or "FAIL"
+
+if result == "PASS" {
+    log("All tests passed")
+} else {
+    log("Tests failed!")
+    exit(1)
+}
+
+log("CI checks complete")

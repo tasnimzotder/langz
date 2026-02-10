@@ -8,7 +8,7 @@
 - [x] **Compound assignment** — `+=`, `-=`, `*=`, `/=`
 - [x] **Default parameters** — `fn greet(name: str = "world")`
 - [x] **Pipe operator** — `x |> upper()` for chaining builtins
-- [ ] **Imports/modules** — split code across files
+- [x] **Imports/modules** — `import "path.lz"` with circular import detection
 - [ ] **Floating point** — decimal number support
 - [ ] **Multi-line strings** — heredoc or triple-quote syntax
 
@@ -19,7 +19,7 @@
 - [x] **Vim/Neovim plugin** — syntax highlighting + LSP setup
 - [x] **`langz fmt` subcommand** — auto-format `.lz` files
 - [x] **Error detection** — ILLEGAL tokens for unterminated strings/unknown chars, parser error reporting, codegen error markers
-- [ ] **Better error messages** — include source line context with `^` pointer in more places
+- [x] **Better error messages** — multi-error reporting with source context and `^` pointer, capped at 10
 - [ ] **Treesitter grammar** — for better syntax highlighting in editors
 
 ## More Builtins

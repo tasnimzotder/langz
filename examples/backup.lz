@@ -1,0 +1,31 @@
+#!/usr/bin/env langz
+// backup.lz — Backup a directory with timestamp
+
+source_dir = env("BACKUP_SOURCE") or "."
+backup_root = env("BACKUP_DEST") or "/tmp/backups"
+today = date()
+
+fn log(msg: str) {
+    print("[backup] {msg}")
+}
+
+backup_dir = "{backup_root}/{today}"
+
+log("Backing up {source_dir} to {backup_dir}")
+
+mkdir(backup_dir)
+
+bash {
+    cp -r "$source_dir"/* "$backup_dir"/ 2>/dev/null || true
+    count=$(ls -1 "$backup_dir" | wc -l | tr -d ' ')
+    echo "[backup] Copied $count items"
+}
+
+// Write manifest
+write("{backup_dir}/MANIFEST.txt", "source={source_dir}")
+append("{backup_dir}/MANIFEST.txt", "date={today}")
+
+user = whoami()
+append("{backup_dir}/MANIFEST.txt", "user={user}")
+
+log("Backup complete: {backup_dir}")

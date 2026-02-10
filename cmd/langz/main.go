@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tasnimzotder/langz/internal/ast"
 	"github.com/tasnimzotder/langz/internal/codegen"
 	"github.com/tasnimzotder/langz/internal/lexer"
 	"github.com/tasnimzotder/langz/internal/lsp"
@@ -20,6 +21,14 @@ func main() {
 	}
 
 	command := os.Args[1]
+
+	// Shebang support: if first arg is a .lz file, treat as "run <file>"
+	if strings.HasSuffix(command, ".lz") {
+		if _, err := os.Stat(command); err == nil {
+			os.Args = append([]string{os.Args[0], "run", command}, os.Args[2:]...)
+			command = "run"
+		}
+	}
 
 	// LSP server needs no file argument
 	if command == "lsp" {
@@ -54,11 +63,21 @@ func main() {
 	}
 
 	tokens := lexer.New(string(source)).Tokenize()
-	prog, parseErr := parser.New(tokens).ParseWithErrors()
-	if parseErr != nil {
-		formatParseError(string(source), inputFile, parseErr)
+	prog, parseErrs := parser.New(tokens).ParseAllErrors()
+	if len(parseErrs) > 0 {
+		formatAllParseErrors(string(source), inputFile, parseErrs)
 		os.Exit(1)
 	}
+
+	// Resolve imports before codegen
+	baseDir := filepath.Dir(inputFile)
+	absInput, _ := filepath.Abs(inputFile)
+	visited := map[string]bool{absInput: true}
+	if err := resolveImports(prog, baseDir, visited); err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", inputFile, err)
+		os.Exit(1)
+	}
+
 	output, codegenErrors := codegen.Generate(prog)
 	if len(codegenErrors) > 0 {
 		for _, e := range codegenErrors {
@@ -110,31 +129,68 @@ func main() {
 	}
 }
 
-// formatParseError prints a parse error with source context and a ^ pointer.
-func formatParseError(source string, inputFile string, parseErr error) {
-	// Try to extract line/col from the structured error format
-	var line, col int
-	var msg string
-	_, scanErr := fmt.Sscanf(parseErr.Error(), "line %d, col %d: ", &line, &col)
-	if scanErr != nil {
-		// Fallback: just print the raw error
-		fmt.Fprintf(os.Stderr, "%s: %v\n", inputFile, parseErr)
-		return
-	}
+// resolveImports walks the AST, finds ImportStmt nodes, reads/parses imported
+// files, and prepends their statements. Circular imports are detected via visited.
+func resolveImports(prog *ast.Program, baseDir string, visited map[string]bool) error {
+	var resolved []ast.Node
+	for _, stmt := range prog.Statements {
+		imp, ok := stmt.(*ast.ImportStmt)
+		if !ok {
+			resolved = append(resolved, stmt)
+			continue
+		}
 
-	// Extract the message after "line X, col Y: "
-	errStr := parseErr.Error()
-	if idx := strings.Index(errStr, ": "); idx >= 0 {
-		msg = errStr[idx+2:]
-	}
+		importPath := filepath.Join(baseDir, imp.Path)
+		absPath, err := filepath.Abs(importPath)
+		if err != nil {
+			return fmt.Errorf("import %q: %v", imp.Path, err)
+		}
 
+		if visited[absPath] {
+			return fmt.Errorf("circular import detected: %s", imp.Path)
+		}
+		visited[absPath] = true
+
+		data, err := os.ReadFile(importPath)
+		if err != nil {
+			return fmt.Errorf("import %q: %v", imp.Path, err)
+		}
+
+		tokens := lexer.New(string(data)).Tokenize()
+		importProg, parseErrs := parser.New(tokens).ParseAllErrors()
+		if len(parseErrs) > 0 {
+			return fmt.Errorf("import %q: %s", imp.Path, parseErrs[0].Message)
+		}
+
+		// Recursively resolve imports in the imported file
+		importDir := filepath.Dir(importPath)
+		if err := resolveImports(importProg, importDir, visited); err != nil {
+			return err
+		}
+
+		resolved = append(resolved, importProg.Statements...)
+	}
+	prog.Statements = resolved
+	return nil
+}
+
+// formatAllParseErrors prints all parse errors with source context.
+func formatAllParseErrors(source string, inputFile string, errs []parser.ParseError) {
 	lines := strings.Split(source, "\n")
-	fmt.Fprintf(os.Stderr, "%s:%d:%d: %s\n", inputFile, line, col, msg)
-	if line >= 1 && line <= len(lines) {
-		srcLine := lines[line-1]
-		fmt.Fprintf(os.Stderr, "  %s\n", srcLine)
-		if col >= 1 && col <= len(srcLine)+1 {
-			fmt.Fprintf(os.Stderr, "  %s^\n", strings.Repeat(" ", col-1))
+	maxShow := 10
+	for i, e := range errs {
+		if i >= maxShow {
+			remaining := len(errs) - maxShow
+			fmt.Fprintf(os.Stderr, "... and %d more error(s)\n", remaining)
+			break
+		}
+		fmt.Fprintf(os.Stderr, "%s:%d:%d: %s\n", inputFile, e.Line, e.Col, e.Message)
+		if e.Line >= 1 && e.Line <= len(lines) {
+			srcLine := lines[e.Line-1]
+			fmt.Fprintf(os.Stderr, "  %s\n", srcLine)
+			if e.Col >= 1 && e.Col <= len(srcLine)+1 {
+				fmt.Fprintf(os.Stderr, "  %s^\n", strings.Repeat(" ", e.Col-1))
+			}
 		}
 	}
 }

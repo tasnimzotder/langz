@@ -1,0 +1,23 @@
+#!/usr/bin/env langz
+// port_scanner.lz — Check if common ports are open on a host
+
+host = env("SCAN_HOST") or "localhost"
+
+fn log(msg: str) {
+    print("[scan] {msg}")
+}
+
+log("Scanning {host}")
+
+ports = ["22", "80", "443", "3000", "5432", "8080"]
+for port in ports {
+    bash {
+        if timeout 1 bash -c "echo >/dev/tcp/$host/$port" 2>/dev/null; then
+            echo "[scan] Port $port: OPEN"
+        else
+            echo "[scan] Port $port: closed"
+        fi
+    }
+}
+
+log("Scan complete")

@@ -1,0 +1,41 @@
+#!/usr/bin/env langz
+// system_info.lz — Print system information summary
+
+fn separator() {
+    print("─────────────────────────────────")
+}
+
+print("System Information")
+separator()
+
+platform = os()
+host = hostname()
+user = whoami()
+arch_name = arch()
+today = date()
+
+print("Date:     {today}")
+print("User:     {user}")
+print("Host:     {host}")
+print("OS:       {platform}")
+print("Arch:     {arch_name}")
+
+separator()
+print("Disk Usage:")
+bash {
+    df -h / | tail -1 | awk '{printf "  Total: %s  Used: %s  Free: %s  (%s)\n", $2, $3, $4, $5}'
+}
+
+separator()
+print("Memory:")
+bash {
+    if command -v free &>/dev/null; then
+        free -h | grep Mem | awk '{printf "  Total: %s  Used: %s  Free: %s\n", $2, $3, $4}'
+    elif [ "$(uname)" = "Darwin" ]; then
+        mem=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+        mem_gb=$((mem / 1073741824))
+        echo "  Total: ${mem_gb}GB"
+    fi
+}
+
+separator()

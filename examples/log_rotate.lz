@@ -1,0 +1,33 @@
+#!/usr/bin/env langz
+// log_rotate.lz — Rotate and compress log files
+
+log_dir = env("LOG_DIR") or "/var/log/myapp"
+max_files = 5
+
+fn log(msg: str) {
+    print("[rotate] {msg}")
+}
+
+log("Rotating logs in {log_dir}")
+
+// Compress old logs
+bash {
+    for f in "$log_dir"/*.log; do
+        [ -f "$f" ] || continue
+        gzip -f "$f" 2>/dev/null && echo "[rotate] Compressed $f"
+    done
+}
+
+// Remove oldest archives beyond max_files
+bash {
+    count=$(ls -1 "$log_dir"/*.gz 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$count" -gt "$max_files" ]; then
+        remove=$((count - max_files))
+        ls -1t "$log_dir"/*.gz | tail -n "$remove" | while read -r f; do
+            rm -f "$f"
+            echo "[rotate] Removed old archive: $f"
+        done
+    fi
+}
+
+log("Rotation complete")

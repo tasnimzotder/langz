@@ -1,0 +1,20 @@
+#!/usr/bin/env langz
+// health_check.lz — HTTP health check with retries
+
+url = env("HEALTH_URL") or "https://httpbin.org/status/200"
+
+fn log(msg: str) {
+    print("[health] {msg}")
+}
+
+log("Checking {url}")
+
+// Fetch with retries
+response = fetch(url, retries: 3, timeout: 5) or "FAILED"
+
+if _status == 200 {
+    log("Service is healthy (HTTP {_status})")
+} else {
+    log("Service is unhealthy (HTTP {_status})")
+    exit(1)
+}

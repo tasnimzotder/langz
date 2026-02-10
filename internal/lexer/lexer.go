@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -138,6 +139,50 @@ func (l *Lexer) readNumber() string {
 	return l.input[start:l.pos]
 }
 
+// readBashContent reads raw content inside a bash { } block,
+// tracking brace depth and respecting string literals.
+func (l *Lexer) readBashContent() string {
+	depth := 1
+	start := l.pos
+	for l.pos < len(l.input) && depth > 0 {
+		switch l.current {
+		case '{':
+			depth++
+			l.advance()
+		case '}':
+			depth--
+			if depth == 0 {
+				content := l.input[start:l.pos]
+				l.advance() // skip closing }
+				return strings.TrimSpace(content)
+			}
+			l.advance()
+		case '"', '\'':
+			// Skip string literals to avoid counting braces inside them
+			quote := l.current
+			l.advance()
+			for l.pos < len(l.input) && l.current != quote {
+				if l.current == '\\' {
+					l.advance() // skip escape
+				}
+				l.advance()
+			}
+			if l.pos < len(l.input) {
+				l.advance() // skip closing quote
+			}
+		case '#':
+			// Skip comments to end of line
+			for l.pos < len(l.input) && l.current != '\n' {
+				l.advance()
+			}
+		default:
+			l.advance()
+		}
+	}
+	// Unterminated — return what we have
+	return strings.TrimSpace(l.input[start:l.pos])
+}
+
 func isLetter(ch rune) bool {
 	return unicode.IsLetter(ch)
 }
@@ -153,6 +198,13 @@ func isAlphanumeric(ch rune) bool {
 // Tokenize scans the entire input and returns a slice of tokens.
 func (l *Lexer) Tokenize() []Token {
 	var tokens []Token
+
+	// Skip shebang line (e.g. #!/usr/bin/env langz)
+	if l.pos < len(l.input) && l.current == '#' && l.peekByte() == '!' {
+		for l.pos < len(l.input) && l.current != '\n' {
+			l.advance()
+		}
+	}
 
 	for l.pos < len(l.input) {
 		l.skipWhitespace()
@@ -285,6 +337,16 @@ func (l *Lexer) Tokenize() []Token {
 			word := l.readIdent()
 			if kwType, ok := keywords[word]; ok {
 				tokens = append(tokens, l.token(kwType, word, line, col))
+				// After BASH keyword, capture raw content between { }
+				if kwType == BASH {
+					l.skipWhitespace()
+					if l.pos < len(l.input) && l.current == '{' {
+						l.advance() // skip opening {
+						content := l.readBashContent()
+						cLine, cCol := l.line, l.col
+						tokens = append(tokens, l.token(BASH_CONTENT, content, cLine, cCol))
+					}
+				}
 			} else {
 				tokens = append(tokens, l.token(IDENT, word, line, col))
 			}

@@ -32,6 +32,10 @@ func (g *Generator) genStatement(node ast.Node) {
 		g.genIndexAssignment(n)
 	case *ast.WhileStmt:
 		g.genWhile(n)
+	case *ast.BashBlock:
+		g.genBashBlock(n)
+	case *ast.ImportStmt:
+		// Import statements are resolved before codegen; skip silently
 	default:
 		g.writeln(fmt.Sprintf("# error: unhandled statement type %T", node))
 	}
@@ -238,6 +242,12 @@ func (g *Generator) genIndexAssignment(n *ast.IndexAssignment) {
 		// Array assignment: items[0] = "new" → items[0]="new"
 		idx := g.genRawValue(n.Index)
 		g.writeln(fmt.Sprintf(`%s[%s]=%s`, n.Object, idx, val))
+	}
+}
+
+func (g *Generator) genBashBlock(b *ast.BashBlock) {
+	for _, line := range strings.Split(b.Content, "\n") {
+		g.writeln(line)
 	}
 }
 

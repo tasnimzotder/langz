@@ -113,10 +113,63 @@ today = date()
 if is_dir(src) {
     backup_dir = "{dst}/{today}"
     mkdir(backup_dir)
-    exec("cp -r {src}/* {backup_dir}/")
+    bash {
+        cp -r "$src"/* "$backup_dir"/ 2>/dev/null || true
+    }
     print("Backed up {src} to {backup_dir}")
 } else {
     print("Source not found: {src}")
     exit(1)
 }
 ```
+
+## Bash Escape Hatch
+
+Use `bash { }` for shell-specific logic:
+
+```
+print("Checking system...")
+
+bash {
+    if command -v docker &>/dev/null; then
+        docker_version=$(docker --version)
+        echo "Docker: $docker_version"
+    else
+        echo "Docker not installed"
+    fi
+}
+
+bash {
+    for f in /var/log/*.log; do
+        [ -f "$f" ] || continue
+        size=$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null)
+        echo "  $f: ${size} bytes"
+    done
+}
+```
+
+## Imports
+
+Split code into reusable modules:
+
+```
+// lib/logging.lz
+fn info(msg: str) {
+    print("[INFO] {msg}")
+}
+
+fn error(msg: str) {
+    print("[ERROR] {msg}")
+}
+```
+
+```
+// deploy.lz
+import "lib/logging.lz"
+
+info("Starting deployment")
+mkdir("dist")
+info("Build directory ready")
+```
+
+Run with `langz run deploy.lz` -- imports are resolved automatically. Circular imports are detected and reported as errors.
