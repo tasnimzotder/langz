@@ -64,17 +64,40 @@ func formatSource(source string, tabSize int, insertSpaces bool) string {
 			result[i] = ""
 			continue
 		}
-		if strings.HasPrefix(trimmed, "}") {
+		code := codePart(trimmed)
+		if strings.HasPrefix(code, "}") {
 			level--
 			if level < 0 {
 				level = 0
 			}
 		}
 		result[i] = strings.Repeat(indent, level) + trimmed
-		if strings.HasSuffix(trimmed, "{") {
+		if strings.HasSuffix(code, "{") {
 			level++
 		}
 	}
 
 	return strings.Join(result, "\n")
+}
+
+// codePart extracts the structural code from a line, stripping
+// string contents and trailing comments so brace detection is accurate.
+func codePart(line string) string {
+	var b strings.Builder
+	inString := false
+	for i := 0; i < len(line); i++ {
+		ch := line[i]
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		if ch == '/' && i+1 < len(line) && line[i+1] == '/' {
+			break
+		}
+		b.WriteByte(ch)
+	}
+	return strings.TrimSpace(b.String())
 }
