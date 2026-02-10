@@ -1,3 +1,16 @@
 name = "world"
 print("Hello, Langz!")
 print(name)
+
+resp = fetch(
+"https://jsonplaceholder.typicode.com/todos/1",
+method="GET",
+headers={"Accept": "application/json"},
+timeout: 5000,
+retries: 2
+)
+print(resp)
+print(_status)
+print(_headers)
+print(_body)
+json_get(_body)

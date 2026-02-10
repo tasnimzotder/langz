@@ -15,3 +15,6 @@ if exists("config.json") {
 
 mkdir("build/output")
 write("build/output/version.txt", version)
+
+_os = os()
+print("Running on {_os}")
