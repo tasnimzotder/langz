@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test -v ./...
+        run: go run gotest.tools/gotestsum@latest -- ./...
 
       - name: Vet
         run: go vet ./...

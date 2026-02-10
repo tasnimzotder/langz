@@ -60,3 +60,42 @@ if file.ends_with(".sh") {
 	assert.Equal(t, 0, code)
 	assert.Equal(t, "shell", output)
 }
+
+func TestE2E_Split(t *testing.T) {
+	source := `
+csv = "alice,bob,charlie"
+parts = csv.split(",")
+print(parts[1])
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "bob", output)
+}
+
+func TestE2E_Join(t *testing.T) {
+	source := `
+items = ["hello", "world", "langz"]
+result = items.join("-")
+print(result)
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "hello-world-langz", output)
+}
+
+func TestE2E_Length(t *testing.T) {
+	source := `
+name = "hello"
+n = name.length()
+print(n)
+`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, "5", output)
+}

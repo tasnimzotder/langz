@@ -66,6 +66,9 @@ var methodDocs = map[string]string{
 	"contains":    "```\nstr.contains(substr) -> bool\n```\nCheck if string contains substring.\n\nTranspiles to `[[ \"$str\" == *\"substr\"* ]]`.",
 	"starts_with": "```\nstr.starts_with(prefix) -> bool\n```\nCheck if string starts with prefix.\n\nTranspiles to `[[ \"$str\" == \"prefix\"* ]]`.",
 	"ends_with":   "```\nstr.ends_with(suffix) -> bool\n```\nCheck if string ends with suffix.\n\nTranspiles to `[[ \"$str\" == *\"suffix\" ]]`.",
+	"split":       "```\nstr.split(sep) -> list\n```\nSplit string into array by separator.\n\nTranspiles to `IFS='sep' read -ra arr <<< \"$str\"`.",
+	"join":        "```\nlist.join(sep) -> string\n```\nJoin array elements with separator.\n\nTranspiles to `$(IFS='sep'; echo \"${list[*]}\")`.",
+	"length":      "```\nstr.length() -> int\n```\nGet string length.\n\nTranspiles to `${#str}`.",
 }
 
 // kwargDoc describes a single keyword argument for a builtin function.

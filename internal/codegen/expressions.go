@@ -150,9 +150,23 @@ func (g *Generator) genMethodCall(m *ast.MethodCall) string {
 		}
 		suffix := g.genRawValue(m.Args[0])
 		return fmt.Sprintf(`[[ "$%s" == *"%s" ]]`, obj, suffix)
+	case "join":
+		if len(m.Args) != 1 {
+			return "# error: join() requires 1 argument (separator)"
+		}
+		sep := g.genRawValue(m.Args[0])
+		return fmt.Sprintf(`$(IFS='%s'; echo "${%s[*]}")`, sep, obj)
+	case "length":
+		return fmt.Sprintf("${#%s}", obj)
 	default:
 		return fmt.Sprintf("# error: unknown method %s", m.Method)
 	}
+}
+
+func (g *Generator) genSplitAssignment(name string, mc *ast.MethodCall) {
+	obj := g.genVarName(mc.Object)
+	sep := g.genRawValue(mc.Args[0])
+	g.writeln(fmt.Sprintf(`IFS='%s' read -ra %s <<< "$%s"`, sep, name, obj))
 }
 
 // genRawValue extracts the raw value from a node without quoting.

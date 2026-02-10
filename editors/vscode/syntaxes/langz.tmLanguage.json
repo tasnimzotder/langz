@@ -8,6 +8,7 @@
     { "include": "#numbers" },
     { "include": "#keywords" },
     { "include": "#builtins" },
+    { "include": "#methods" },
     { "include": "#operators" }
   ],
   "repository": {
@@ -34,7 +35,7 @@
       "patterns": [
         {
           "name": "keyword.control.langz",
-          "match": "\\b(if|else|for|in|fn|return|match|continue|break|while)\\b"
+          "match": "\\b(if|elif|else|for|in|fn|return|match|continue|break|while)\\b"
         },
         {
           "name": "keyword.operator.logical.langz",
@@ -48,11 +49,15 @@
     },
     "builtins": {
       "name": "support.function.langz",
-      "match": "\\b(print|exec|env|read|write|rm|mkdir|copy|move|chmod|glob|exit|fetch|sleep|append|hostname|whoami|arch|dirname|basename|is_file|is_dir|rmdir|upper|lower|os|args|range|exists)\\b(?=\\s*\\()"
+      "match": "\\b(print|exec|env|read|write|rm|mkdir|copy|move|chmod|chown|glob|exit|fetch|sleep|append|hostname|whoami|arch|dirname|basename|is_file|is_dir|rmdir|upper|lower|os|args|range|exists|json_get|trim|len|timestamp|date)\\b(?=\\s*\\()"
+    },
+    "methods": {
+      "name": "support.function.method.langz",
+      "match": "(?<=\\.)\\b(replace|contains|starts_with|ends_with|split|join|length)\\b(?=\\s*\\()"
     },
     "operators": {
       "name": "keyword.operator.langz",
-      "match": "(=>|->|==|!=|>=|<=|[=+\\-*/%<>!])"
+      "match": "(\\|>|=>|->|==|!=|>=|<=|\\+=|-=|\\*=|/=|[=+\\-*/%<>!])"
     }
   }
 }

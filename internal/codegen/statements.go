@@ -48,6 +48,10 @@ func (g *Generator) genAssignment(a *ast.Assignment) {
 		g.genFetchAssignment(a.Name, call)
 		return
 	}
+	if mc, ok := a.Value.(*ast.MethodCall); ok && mc.Method == "split" {
+		g.genSplitAssignment(a.Name, mc)
+		return
+	}
 	g.writeIndent()
 	value := g.genExpr(a.Value)
 	g.write(fmt.Sprintf("%s=%s\n", a.Name, value))

@@ -63,8 +63,12 @@ Methods called on string variables:
 | `s.contains(substr)` | Check if string contains substr | `[[ "$s" == *"substr"* ]]` |
 | `s.starts_with(prefix)` | Check if string starts with prefix | `[[ "$s" == "prefix"* ]]` |
 | `s.ends_with(suffix)` | Check if string ends with suffix | `[[ "$s" == *"suffix" ]]` |
+| `s.split(sep)` | Split string into array | `IFS='sep' read -ra arr <<< "$s"` |
+| `s.join(sep)` | Join array elements | `$(IFS='sep'; echo "${s[*]}")` |
+| `s.length()` | Get string length | `${#s}` |
 
-`.contains()`, `.starts_with()`, and `.ends_with()` return conditions for use in `if`/`while`:
+`.contains()`, `.starts_with()`, and `.ends_with()` return conditions for use in `if`/`while`.
+`.split()` produces an array that can be indexed:
 
 ```
 name = "hello world"
@@ -74,9 +78,14 @@ if name.contains("hello") {
     print("found")
 }
 
-if name.starts_with("hello") {
-    print("starts with hello")
-}
+csv = "alice,bob,charlie"
+parts = csv.split(",")
+print(parts[1])  // "bob"
+
+items = ["a", "b", "c"]
+joined = items.join("-")  // "a-b-c"
+
+n = name.length()  // 11
 ```
 
 ## Networking

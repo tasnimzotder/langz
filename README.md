@@ -166,9 +166,13 @@ if name.contains("hello") {
     print("found")
 }
 
-if name.starts_with("hello") {
-    print("yes")
-}
+parts = name.split(" ")
+print(parts[0])  // "hello"
+
+items = ["a", "b", "c"]
+joined = items.join(",")  // "a,b,c"
+
+n = name.length()  // 11
 ```
 
 ### Compound Assignment
@@ -252,6 +256,9 @@ if a + b > 10 {
 | `s.contains(sub)` | Check if contains | `[[ "$s" == *"sub"* ]]` |
 | `s.starts_with(pre)` | Check if starts with | `[[ "$s" == "pre"* ]]` |
 | `s.ends_with(suf)` | Check if ends with | `[[ "$s" == *"suf" ]]` |
+| `s.split(sep)` | Split into array | `IFS='sep' read -ra ...` |
+| `list.join(sep)` | Join array elements | `$(IFS='sep'; echo ...)` |
+| `s.length()` | Get string length | `${#s}` |
 
 ### Networking
 

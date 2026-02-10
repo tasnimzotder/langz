@@ -48,3 +48,30 @@ if file.ends_with(".sh") {
 
 	assert.Contains(t, output, `[[ "$file" == *".sh" ]]`)
 }
+
+func TestMethodSplit(t *testing.T) {
+	output := body(compile(`
+name = "a,b,c"
+parts = name.split(",")
+`))
+
+	assert.Contains(t, output, `IFS=',' read -ra parts <<< "$name"`)
+}
+
+func TestMethodJoin(t *testing.T) {
+	output := body(compile(`
+items = ["a", "b", "c"]
+result = items.join(",")
+`))
+
+	assert.Contains(t, output, `$(IFS=','; echo "${items[*]}")`)
+}
+
+func TestMethodLength(t *testing.T) {
+	output := body(compile(`
+name = "hello"
+n = name.length()
+`))
+
+	assert.Contains(t, output, `${#name}`)
+}
