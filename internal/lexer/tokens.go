@@ -34,6 +34,7 @@ const (
 	DOT        TokenType = "DOT"        // .
 	ARROW      TokenType = "ARROW"      // ->
 	FATARROW   TokenType = "FATARROW"   // =>
+	PIPE       TokenType = "PIPE"       // |>
 	UNDERSCORE TokenType = "UNDERSCORE" // _
 
 	// Keywords

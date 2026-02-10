@@ -45,7 +45,7 @@ func (p *Parser) parseAssignment() *ast.Assignment {
 	name := p.expect(lexer.IDENT)
 	p.expect(lexer.ASSIGN)
 
-	value := p.parseExpression()
+	value := p.parsePipeExpr()
 
 	if p.current.Type == lexer.OR {
 		p.advance()

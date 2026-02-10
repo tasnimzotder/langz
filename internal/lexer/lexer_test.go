@@ -318,6 +318,24 @@ func TestStringNoEscapes(t *testing.T) {
 	})
 }
 
+func TestPipeOperator(t *testing.T) {
+	assertTokens(t, `data |> upper`, []Token{
+		{Type: IDENT, Value: "data"},
+		{Type: PIPE, Value: "|>"},
+		{Type: IDENT, Value: "upper"},
+	})
+}
+
+func TestPipeChain(t *testing.T) {
+	assertTokens(t, `data |> upper |> trim`, []Token{
+		{Type: IDENT, Value: "data"},
+		{Type: PIPE, Value: "|>"},
+		{Type: IDENT, Value: "upper"},
+		{Type: PIPE, Value: "|>"},
+		{Type: IDENT, Value: "trim"},
+	})
+}
+
 func TestTokenPositions(t *testing.T) {
 	tokens := New("x = 1\ny = 2").Tokenize()
 

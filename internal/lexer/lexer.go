@@ -210,6 +210,10 @@ func (l *Lexer) Tokenize() []Token {
 		case l.current == ':':
 			tokens = append(tokens, l.token(COLON, ":", line, col))
 			l.advance()
+		case l.current == '|' && l.peek() == '>':
+			tokens = append(tokens, l.token(PIPE, "|>", line, col))
+			l.advance()
+			l.advance()
 		case l.current == '.':
 			tokens = append(tokens, l.token(DOT, ".", line, col))
 			l.advance()

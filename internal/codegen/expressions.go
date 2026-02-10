@@ -42,6 +42,9 @@ func (g *Generator) genExpr(node ast.Node) string {
 		obj := g.genExpr(n.Object)
 		return fmt.Sprintf("%s.%s", obj, n.Field)
 	case *ast.BinaryExpr:
+		if n.Op == "|>" {
+			return g.genPipeExpr(n)
+		}
 		if isArithmeticOp(n.Op) {
 			prec := arithPrecedence(n.Op)
 			return fmt.Sprintf("$((%s %s %s))", g.genArithOperandPrec(n.Left, prec), n.Op, g.genArithOperandPrec(n.Right, prec))
@@ -74,6 +77,25 @@ func (g *Generator) genFuncCallExpr(f *ast.FuncCall) string {
 		args[i] = g.genExpr(arg)
 	}
 	return fmt.Sprintf("%s %s", f.Name, strings.Join(args, " "))
+}
+
+// genPipeExpr transforms a |> f into f(a) by synthesizing a FuncCall.
+func (g *Generator) genPipeExpr(expr *ast.BinaryExpr) string {
+	switch right := expr.Right.(type) {
+	case *ast.Identifier:
+		// data |> upper → upper(data)
+		call := &ast.FuncCall{Name: right.Name, Args: []ast.Node{expr.Left}}
+		return g.genFuncCallExpr(call)
+	case *ast.FuncCall:
+		// data |> json_get(".name") → json_get(data, ".name")
+		args := make([]ast.Node, 0, 1+len(right.Args))
+		args = append(args, expr.Left)
+		args = append(args, right.Args...)
+		call := &ast.FuncCall{Name: right.Name, Args: args, KwArgs: right.KwArgs}
+		return g.genFuncCallExpr(call)
+	default:
+		return "# error: pipe target must be a function"
+	}
 }
 
 // genRawValue extracts the raw value from a node without quoting.

@@ -5,6 +5,18 @@ import (
 	"github.com/tasnimzotder/langz/internal/lexer"
 )
 
+// parsePipeExpr handles |> at the lowest precedence for assignment context.
+// a |> f |> g parses as ((a |> f) |> g) — left-associative.
+func (p *Parser) parsePipeExpr() ast.Node {
+	left := p.parseExpression()
+	for p.current.Type == lexer.PIPE {
+		p.advance()
+		right := p.parseExpression()
+		left = &ast.BinaryExpr{Left: left, Op: "|>", Right: right}
+	}
+	return left
+}
+
 // parseCondition handles `or` at the lowest precedence level, used only
 // in condition contexts (if/while). This keeps `or` out of parseExpression
 // so that assignment fallback (`x = expr or fallback`) still works.
