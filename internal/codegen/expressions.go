@@ -16,10 +16,17 @@ func interpolate(s string) string {
 	return interpRegex.ReplaceAllString(s, "${$1}")
 }
 
+// bashEscape escapes characters that are special inside Bash double quotes.
+func bashEscape(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
+}
+
 func (g *Generator) genExpr(node ast.Node) string {
 	switch n := node.(type) {
 	case *ast.StringLiteral:
-		return fmt.Sprintf(`"%s"`, interpolate(n.Value))
+		return fmt.Sprintf(`"%s"`, interpolate(bashEscape(n.Value)))
 	case *ast.IntLiteral:
 		return n.Value
 	case *ast.BoolLiteral:
@@ -117,7 +124,7 @@ func (g *Generator) genConditionOperand(node ast.Node) string {
 	case *ast.IntLiteral:
 		return n.Value
 	case *ast.StringLiteral:
-		return fmt.Sprintf(`"%s"`, interpolate(n.Value))
+		return fmt.Sprintf(`"%s"`, interpolate(bashEscape(n.Value)))
 	default:
 		return g.genExpr(node)
 	}

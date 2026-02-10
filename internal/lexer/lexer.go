@@ -63,13 +63,31 @@ func (l *Lexer) skipComment() {
 
 func (l *Lexer) readString() string {
 	l.advance() // skip opening "
-	start := l.pos
+	var buf []byte
 	for l.pos < len(l.input) && l.current != '"' {
-		l.advance()
+		if l.current == '\\' && l.pos+1 < len(l.input) {
+			next := l.input[l.pos+1]
+			switch next {
+			case '"':
+				buf = append(buf, '"')
+			case 'n':
+				buf = append(buf, '\n')
+			case 't':
+				buf = append(buf, '\t')
+			case '\\':
+				buf = append(buf, '\\')
+			default:
+				buf = append(buf, '\\', next)
+			}
+			l.advance() // skip '\'
+			l.advance() // skip escaped char
+		} else {
+			buf = append(buf, l.current)
+			l.advance()
+		}
 	}
-	value := l.input[start:l.pos]
 	l.advance() // skip closing "
-	return value
+	return string(buf)
 }
 
 func (l *Lexer) readIdent() string {

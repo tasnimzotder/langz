@@ -277,6 +277,47 @@ func TestCommentOnlyLine(t *testing.T) {
 	assertTokens(t, "// just a comment", []Token{})
 }
 
+func TestStringEscapeQuote(t *testing.T) {
+	assertTokens(t, `x = "say \"hello\""`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: STRING, Value: `say "hello"`},
+	})
+}
+
+func TestStringEscapeNewline(t *testing.T) {
+	assertTokens(t, `x = "line1\nline2"`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: STRING, Value: "line1\nline2"},
+	})
+}
+
+func TestStringEscapeTab(t *testing.T) {
+	assertTokens(t, `x = "col1\tcol2"`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: STRING, Value: "col1\tcol2"},
+	})
+}
+
+func TestStringEscapeBackslash(t *testing.T) {
+	assertTokens(t, `x = "path\\to\\file"`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: STRING, Value: `path\to\file`},
+	})
+}
+
+func TestStringNoEscapes(t *testing.T) {
+	// Existing strings without escapes still work
+	assertTokens(t, `x = "hello world"`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: ASSIGN, Value: "="},
+		{Type: STRING, Value: "hello world"},
+	})
+}
+
 func TestTokenPositions(t *testing.T) {
 	tokens := New("x = 1\ny = 2").Tokenize()
 

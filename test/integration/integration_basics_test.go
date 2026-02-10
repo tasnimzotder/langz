@@ -129,6 +129,25 @@ if verbose {
 	assert.Equal(t, "debug on", output)
 }
 
+func TestE2E_StringEscapeQuote(t *testing.T) {
+	source := `print("say \"hello\"")`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Equal(t, `say "hello"`, output)
+}
+
+func TestE2E_StringEscapeNewline(t *testing.T) {
+	source := `print("line1\nline2")`
+	bash := compileSource(t, source)
+	output, code := runBash(t, bash)
+
+	assert.Equal(t, 0, code)
+	assert.Contains(t, output, "line1")
+	assert.Contains(t, output, "line2")
+}
+
 func TestE2E_ExitCode(t *testing.T) {
 	source := `exit(42)`
 	bash := compileSource(t, source)
