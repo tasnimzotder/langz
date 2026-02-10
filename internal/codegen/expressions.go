@@ -58,6 +58,10 @@ func (g *Generator) genExpr(node ast.Node) string {
 			elems[i] = g.genExpr(e)
 		}
 		return fmt.Sprintf("(%s)", strings.Join(elems, " "))
+	case *ast.IndexExpr:
+		return g.genIndexExpr(n)
+	case *ast.MethodCall:
+		return g.genMethodCall(n)
 	case *ast.MapLiteral:
 		return g.genMapLiteral(n)
 	default:
@@ -95,6 +99,59 @@ func (g *Generator) genPipeExpr(expr *ast.BinaryExpr) string {
 		return g.genFuncCallExpr(call)
 	default:
 		return "# error: pipe target must be a function"
+	}
+}
+
+func (g *Generator) genIndexExpr(n *ast.IndexExpr) string {
+	obj := g.genVarName(n.Object)
+	switch idx := n.Index.(type) {
+	case *ast.StringLiteral:
+		// Map access with string key: config["host"] → "$config_host"
+		return fmt.Sprintf(`"$%s_%s"`, obj, idx.Value)
+	default:
+		// Array access: items[0] or items[i] → "${items[idx]}"
+		return fmt.Sprintf(`"${%s[%s]}"`, obj, g.genRawValue(n.Index))
+	}
+}
+
+// genVarName extracts the bare variable name from a node (no $ prefix).
+func (g *Generator) genVarName(node ast.Node) string {
+	if id, ok := node.(*ast.Identifier); ok {
+		return id.Name
+	}
+	return g.genRawValue(node)
+}
+
+func (g *Generator) genMethodCall(m *ast.MethodCall) string {
+	obj := g.genVarName(m.Object)
+	switch m.Method {
+	case "replace":
+		if len(m.Args) != 2 {
+			return "# error: replace() requires 2 arguments (old, new)"
+		}
+		old := g.genRawValue(m.Args[0])
+		newVal := g.genRawValue(m.Args[1])
+		return fmt.Sprintf(`"${%s//%s/%s}"`, obj, old, newVal)
+	case "contains":
+		if len(m.Args) != 1 {
+			return "# error: contains() requires 1 argument"
+		}
+		sub := g.genRawValue(m.Args[0])
+		return fmt.Sprintf(`[[ "$%s" == *"%s"* ]]`, obj, sub)
+	case "starts_with":
+		if len(m.Args) != 1 {
+			return "# error: starts_with() requires 1 argument"
+		}
+		prefix := g.genRawValue(m.Args[0])
+		return fmt.Sprintf(`[[ "$%s" == "%s"* ]]`, obj, prefix)
+	case "ends_with":
+		if len(m.Args) != 1 {
+			return "# error: ends_with() requires 1 argument"
+		}
+		suffix := g.genRawValue(m.Args[0])
+		return fmt.Sprintf(`[[ "$%s" == *"%s" ]]`, obj, suffix)
+	default:
+		return fmt.Sprintf("# error: unknown method %s", m.Method)
 	}
 }
 

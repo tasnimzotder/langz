@@ -10,7 +10,11 @@ const (
 	STRING TokenType = "STRING"
 
 	// Operators & punctuation
-	ASSIGN     TokenType = "ASSIGN"     // =
+	ASSIGN       TokenType = "ASSIGN"       // =
+	PLUS_ASSIGN  TokenType = "PLUS_ASSIGN"  // +=
+	MINUS_ASSIGN TokenType = "MINUS_ASSIGN" // -=
+	STAR_ASSIGN  TokenType = "STAR_ASSIGN"  // *=
+	SLASH_ASSIGN TokenType = "SLASH_ASSIGN" // /=
 	EQ         TokenType = "EQ"         // ==
 	NEQ        TokenType = "NEQ"        // !=
 	GT         TokenType = "GT"         // >

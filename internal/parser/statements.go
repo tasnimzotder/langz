@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/tasnimzotder/langz/internal/ast"
 	"github.com/tasnimzotder/langz/internal/lexer"
 )
@@ -28,6 +30,12 @@ func (p *Parser) parseStatement() ast.Node {
 	case lexer.IDENT:
 		if p.peek().Type == lexer.ASSIGN {
 			return p.parseAssignment()
+		}
+		if isCompoundAssign(p.peek().Type) {
+			return p.parseCompoundAssignment()
+		}
+		if p.peek().Type == lexer.LBRACKET {
+			return p.parseIndexOrExpr()
 		}
 		if p.peek().Type == lexer.LPAREN {
 			return p.parseFuncCall()
@@ -80,7 +88,13 @@ func (p *Parser) parseIf() *ast.IfStmt {
 	var elseBody []ast.Node
 	if p.current.Type == lexer.ELSE {
 		p.advance()
-		elseBody = p.parseBlock()
+		if p.current.Type == lexer.IF {
+			// elif: recursively parse as IfStmt
+			elif := p.parseIf()
+			elseBody = []ast.Node{elif}
+		} else {
+			elseBody = p.parseBlock()
+		}
 	}
 
 	return &ast.IfStmt{Condition: condition, Body: body, ElseBody: elseBody}
@@ -118,7 +132,14 @@ func (p *Parser) parseFuncDecl() *ast.FuncDecl {
 		paramName := p.expect(lexer.IDENT)
 		p.expect(lexer.COLON)
 		paramType := p.expect(lexer.IDENT)
-		params = append(params, ast.Param{Name: paramName.Value, Type: paramType.Value})
+
+		var defaultVal ast.Node
+		if p.current.Type == lexer.ASSIGN {
+			p.advance()
+			defaultVal = p.parsePrimary()
+		}
+
+		params = append(params, ast.Param{Name: paramName.Value, Type: paramType.Value, Default: defaultVal})
 		if p.current.Type == lexer.COMMA {
 			p.advance()
 		}
@@ -193,6 +214,44 @@ func (p *Parser) parseMatch() *ast.MatchStmt {
 	p.expect(lexer.RBRACE)
 
 	return &ast.MatchStmt{Expr: expr, Cases: cases}
+}
+
+func (p *Parser) parseIndexOrExpr() ast.Node {
+	name := p.expect(lexer.IDENT)
+	p.expect(lexer.LBRACKET)
+	index := p.parseExpression()
+	p.expect(lexer.RBRACKET)
+
+	if p.current.Type == lexer.ASSIGN {
+		// Index assignment: arr[0] = value
+		p.advance()
+		value := p.parsePipeExpr()
+		return &ast.IndexAssignment{Object: name.Value, Index: index, Value: value}
+	}
+
+	// Index expression used as statement (rare but valid)
+	return &ast.IndexExpr{Object: &ast.Identifier{Name: name.Value}, Index: index}
+}
+
+func isCompoundAssign(t lexer.TokenType) bool {
+	return t == lexer.PLUS_ASSIGN || t == lexer.MINUS_ASSIGN ||
+		t == lexer.STAR_ASSIGN || t == lexer.SLASH_ASSIGN
+}
+
+func (p *Parser) parseCompoundAssignment() *ast.Assignment {
+	name := p.expect(lexer.IDENT)
+	op := p.current
+	p.advance()
+	value := p.parsePipeExpr()
+	arithOp := strings.TrimSuffix(op.Value, "=")
+	return &ast.Assignment{
+		Name: name.Value,
+		Value: &ast.BinaryExpr{
+			Left:  &ast.Identifier{Name: name.Value},
+			Op:    arithOp,
+			Right: value,
+		},
+	}
 }
 
 func (p *Parser) parseReturn() *ast.ReturnStmt {

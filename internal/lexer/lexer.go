@@ -172,16 +172,36 @@ func (l *Lexer) Tokenize() []Token {
 			}
 			l.advance()
 		case l.current == '+':
-			tokens = append(tokens, l.token(PLUS, "+", line, col))
+			if l.peek() == '=' {
+				tokens = append(tokens, l.token(PLUS_ASSIGN, "+=", line, col))
+				l.advance()
+			} else {
+				tokens = append(tokens, l.token(PLUS, "+", line, col))
+			}
 			l.advance()
 		case l.current == '-':
-			tokens = append(tokens, l.token(MINUS, "-", line, col))
+			if l.peek() == '=' {
+				tokens = append(tokens, l.token(MINUS_ASSIGN, "-=", line, col))
+				l.advance()
+			} else {
+				tokens = append(tokens, l.token(MINUS, "-", line, col))
+			}
 			l.advance()
 		case l.current == '*':
-			tokens = append(tokens, l.token(STAR, "*", line, col))
+			if l.peek() == '=' {
+				tokens = append(tokens, l.token(STAR_ASSIGN, "*=", line, col))
+				l.advance()
+			} else {
+				tokens = append(tokens, l.token(STAR, "*", line, col))
+			}
 			l.advance()
 		case l.current == '/':
-			tokens = append(tokens, l.token(SLASH, "/", line, col))
+			if l.peek() == '=' {
+				tokens = append(tokens, l.token(SLASH_ASSIGN, "/=", line, col))
+				l.advance()
+			} else {
+				tokens = append(tokens, l.token(SLASH, "/", line, col))
+			}
 			l.advance()
 		case l.current == '%':
 			tokens = append(tokens, l.token(PERCENT, "%", line, col))

@@ -318,6 +318,29 @@ func TestStringNoEscapes(t *testing.T) {
 	})
 }
 
+func TestCompoundAssignTokens(t *testing.T) {
+	assertTokens(t, `x += 5`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: PLUS_ASSIGN, Value: "+="},
+		{Type: INT, Value: "5"},
+	})
+	assertTokens(t, `x -= 3`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: MINUS_ASSIGN, Value: "-="},
+		{Type: INT, Value: "3"},
+	})
+	assertTokens(t, `x *= 2`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: STAR_ASSIGN, Value: "*="},
+		{Type: INT, Value: "2"},
+	})
+	assertTokens(t, `x /= 4`, []Token{
+		{Type: IDENT, Value: "x"},
+		{Type: SLASH_ASSIGN, Value: "/="},
+		{Type: INT, Value: "4"},
+	})
+}
+
 func TestPipeOperator(t *testing.T) {
 	assertTokens(t, `data |> upper`, []Token{
 		{Type: IDENT, Value: "data"},

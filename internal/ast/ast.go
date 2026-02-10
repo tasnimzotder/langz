@@ -83,10 +83,11 @@ type FuncDecl struct {
 
 func (f *FuncDecl) nodeType() string { return "FuncDecl" }
 
-// Param: name: type
+// Param: name: type or name: type = default
 type Param struct {
-	Name string
-	Type string
+	Name    string
+	Type    string
+	Default Node // nil if no default
 }
 
 // IfStmt: if cond { body } else { elseBody }
@@ -132,6 +133,15 @@ type DotExpr struct {
 
 func (d *DotExpr) nodeType() string { return "DotExpr" }
 
+// MethodCall: obj.method(args)
+type MethodCall struct {
+	Object Node
+	Method string
+	Args   []Node
+}
+
+func (m *MethodCall) nodeType() string { return "MethodCall" }
+
 // ReturnStmt: return expr
 type ReturnStmt struct {
 	Value Node
@@ -165,6 +175,23 @@ type MapLiteral struct {
 }
 
 func (m *MapLiteral) nodeType() string { return "MapLiteral" }
+
+// IndexExpr: arr[0], map["key"]
+type IndexExpr struct {
+	Object Node
+	Index  Node
+}
+
+func (i *IndexExpr) nodeType() string { return "IndexExpr" }
+
+// IndexAssignment: arr[0] = value
+type IndexAssignment struct {
+	Object string
+	Index  Node
+	Value  Node
+}
+
+func (i *IndexAssignment) nodeType() string { return "IndexAssignment" }
 
 // BlockExpr: { stmts... lastExpr } — used in `or { ... }` blocks
 type BlockExpr struct {

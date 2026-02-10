@@ -28,6 +28,8 @@ func (g *Generator) genStatement(node ast.Node) {
 		g.writeln("continue")
 	case *ast.BreakStmt:
 		g.writeln("break")
+	case *ast.IndexAssignment:
+		g.genIndexAssignment(n)
 	case *ast.WhileStmt:
 		g.genWhile(n)
 	}
@@ -52,9 +54,8 @@ func (g *Generator) genAssignment(a *ast.Assignment) {
 }
 
 func (g *Generator) genMapAssignment(name string, m *ast.MapLiteral) {
-	g.writeln(fmt.Sprintf("declare -A %s", name))
 	for i, key := range m.Keys {
-		g.writeln(fmt.Sprintf("%s[%s]=%s", name, key, g.genExpr(m.Values[i])))
+		g.writeln(fmt.Sprintf("%s_%s=%s", name, key, g.genExpr(m.Values[i])))
 	}
 }
 
@@ -148,7 +149,12 @@ func (g *Generator) genFuncDecl(f *ast.FuncDecl) {
 	g.indent++
 
 	for i, param := range f.Params {
-		g.writeln(fmt.Sprintf(`local %s="$%d"`, param.Name, i+1))
+		if param.Default != nil {
+			def := g.genRawValue(param.Default)
+			g.writeln(fmt.Sprintf(`local %s="${%d:-%s}"`, param.Name, i+1, def))
+		} else {
+			g.writeln(fmt.Sprintf(`local %s="$%d"`, param.Name, i+1))
+		}
 	}
 
 	for _, stmt := range f.Body {
@@ -162,13 +168,23 @@ func (g *Generator) genFuncDecl(f *ast.FuncDecl) {
 func (g *Generator) genIf(i *ast.IfStmt) {
 	g.writeln(fmt.Sprintf("if %s; then", g.genCondition(i.Condition)))
 	g.genBlock(i.Body)
-
-	if len(i.ElseBody) > 0 {
-		g.writeln("else")
-		g.genBlock(i.ElseBody)
-	}
-
+	g.genElseChain(i.ElseBody)
 	g.writeln("fi")
+}
+
+func (g *Generator) genElseChain(elseBody []ast.Node) {
+	if len(elseBody) == 1 {
+		if elif, ok := elseBody[0].(*ast.IfStmt); ok {
+			g.writeln(fmt.Sprintf("elif %s; then", g.genCondition(elif.Condition)))
+			g.genBlock(elif.Body)
+			g.genElseChain(elif.ElseBody)
+			return
+		}
+	}
+	if len(elseBody) > 0 {
+		g.writeln("else")
+		g.genBlock(elseBody)
+	}
 }
 
 func (g *Generator) genFor(f *ast.ForStmt) {
@@ -205,6 +221,18 @@ func (g *Generator) genWhile(w *ast.WhileStmt) {
 	g.writeln(fmt.Sprintf("while %s; do", g.genCondition(w.Condition)))
 	g.genBlock(w.Body)
 	g.writeln("done")
+}
+
+func (g *Generator) genIndexAssignment(n *ast.IndexAssignment) {
+	val := g.genExpr(n.Value)
+	if strIdx, ok := n.Index.(*ast.StringLiteral); ok {
+		// Map assignment: config["host"] = "new" → config_host="new"
+		g.writeln(fmt.Sprintf(`%s_%s=%s`, n.Object, strIdx.Value, val))
+	} else {
+		// Array assignment: items[0] = "new" → items[0]="new"
+		idx := g.genRawValue(n.Index)
+		g.writeln(fmt.Sprintf(`%s[%s]=%s`, n.Object, idx, val))
+	}
 }
 
 func (g *Generator) genReturn(r *ast.ReturnStmt) {

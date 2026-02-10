@@ -79,7 +79,6 @@ func TestEmptyListCodegen(t *testing.T) {
 func TestMapLiteralCodegen(t *testing.T) {
 	output := body(compile(`config = {port: 8080, host: "localhost"}`))
 
-	assert.Contains(t, output, `declare -A config`)
-	assert.Contains(t, output, `config[port]=8080`)
-	assert.Contains(t, output, `config[host]="localhost"`)
+	assert.Contains(t, output, `config_port=8080`)
+	assert.Contains(t, output, `config_host="localhost"`)
 }

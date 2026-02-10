@@ -87,11 +87,25 @@ func (p *Parser) parseMultiplicative() ast.Node {
 func (p *Parser) parseUnary() ast.Node {
 	left := p.parsePrimary()
 
-	// Handle dot access: expr.field
-	for p.current.Type == lexer.DOT {
-		p.advance()
-		field := p.expect(lexer.IDENT)
-		left = &ast.DotExpr{Object: left, Field: field.Value}
+	// Handle postfix operators: dot access, method calls, and bracket indexing
+	for {
+		if p.current.Type == lexer.DOT {
+			p.advance()
+			field := p.expect(lexer.IDENT)
+			if p.current.Type == lexer.LPAREN {
+				// Method call: obj.method(args)
+				left = p.parseMethodCallArgs(left, field.Value)
+			} else {
+				left = &ast.DotExpr{Object: left, Field: field.Value}
+			}
+		} else if p.current.Type == lexer.LBRACKET {
+			p.advance()
+			index := p.parseExpression()
+			p.expect(lexer.RBRACKET)
+			left = &ast.IndexExpr{Object: left, Index: index}
+		} else {
+			break
+		}
 	}
 
 	return left
@@ -192,6 +206,24 @@ func (p *Parser) parseFuncCall() *ast.FuncCall {
 
 	p.expect(lexer.RPAREN)
 	return &ast.FuncCall{Name: name.Value, Args: args, KwArgs: kwargs}
+}
+
+func (p *Parser) parseMethodCallArgs(object ast.Node, method string) *ast.MethodCall {
+	p.expect(lexer.LPAREN)
+
+	var args []ast.Node
+	for p.current.Type != lexer.RPAREN && p.current.Type != lexer.EOF {
+		arg := p.parseExpression()
+		if arg != nil {
+			args = append(args, arg)
+		}
+		if p.current.Type == lexer.COMMA {
+			p.advance()
+		}
+	}
+
+	p.expect(lexer.RPAREN)
+	return &ast.MethodCall{Object: object, Method: method, Args: args}
 }
 
 func (p *Parser) parseListLiteral() *ast.ListLiteral {
