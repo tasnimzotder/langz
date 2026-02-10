@@ -87,6 +87,16 @@ func TestCompletionKwargsNotInsidePrint(t *testing.T) {
 	assert.NotContains(t, names, "method:")
 }
 
+func TestCompletionMethodsAfterDot(t *testing.T) {
+	source := `name.`
+	items := getCompletionItems(source, 1, 6) // after the dot
+	names := completionNames(items)
+	assert.Contains(t, names, "replace")
+	assert.Contains(t, names, "contains")
+	assert.Contains(t, names, "starts_with")
+	assert.Contains(t, names, "ends_with")
+}
+
 func completionNames(items []protocol.CompletionItem) []string {
 	names := make([]string, len(items))
 	for i, item := range items {

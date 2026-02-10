@@ -34,6 +34,27 @@ result = add(3, 5)
 print(result)
 ```
 
+## Default Parameter Values
+
+Parameters can have defaults using `= value`:
+
+```
+fn deploy(target: str = "staging") {
+    print("Deploying to {target}")
+}
+
+deploy()          // uses "staging"
+deploy("prod")    // uses "prod"
+```
+
+**Generated Bash:**
+```bash
+deploy() {
+  local target="${1:-staging}"
+  echo "Deploying to ${target}"
+}
+```
+
 ## Multiple Parameters
 
 ```

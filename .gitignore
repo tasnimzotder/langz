@@ -1,6 +1,7 @@
 # Binaries
 langz
 *.exe
+build/
 
 # Editor artifacts
 editors/vscode/node_modules/

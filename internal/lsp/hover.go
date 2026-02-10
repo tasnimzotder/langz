@@ -48,6 +48,13 @@ func getHoverAt(source string, line, col int) *protocol.Hover {
 		return makeHover(doc, token)
 	}
 
+	// Check method docs (IDENT preceded by DOT)
+	if isMethod(source, token) {
+		if doc, ok := methodDocs[token.Value]; ok {
+			return makeHover(doc, token)
+		}
+	}
+
 	// Check if this is a kwarg: IDENT followed by COLON
 	if isKwarg(source, token) {
 		funcName, _ := findEnclosingFuncCall(source, line, col)
@@ -81,6 +88,21 @@ func makeHover(doc string, token *lexer.Token) *protocol.Hover {
 			},
 		},
 	}
+}
+
+// isMethod checks if the given IDENT token is preceded by a DOT in the token stream.
+func isMethod(source string, target *lexer.Token) bool {
+	tokens := lexer.New(source).Tokenize()
+	for i := range tokens {
+		t := &tokens[i]
+		if t.Line == target.Line && t.Col == target.Col && t.Type == lexer.IDENT {
+			if i > 0 && tokens[i-1].Type == lexer.DOT {
+				return true
+			}
+			return false
+		}
+	}
+	return false
 }
 
 // isKwarg checks if the given IDENT token is followed by a COLON in the token stream.

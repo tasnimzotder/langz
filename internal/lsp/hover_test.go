@@ -38,6 +38,23 @@ func TestHoverOnKwargNotRegularIdent(t *testing.T) {
 	assert.Nil(t, hover)
 }
 
+func TestHoverOnMethod(t *testing.T) {
+	source := `name.replace("a", "b")`
+	hover := getHoverAt(source, 1, 6) // "replace" starts at col 6
+	require.NotNil(t, hover)
+	val := hoverValue(t, hover)
+	assert.Contains(t, val, "replace")
+	assert.Contains(t, val, "Replace all occurrences")
+}
+
+func TestHoverOnMethodContains(t *testing.T) {
+	source := `name.contains("test")`
+	hover := getHoverAt(source, 1, 6)
+	require.NotNil(t, hover)
+	val := hoverValue(t, hover)
+	assert.Contains(t, val, "contains")
+}
+
 func TestHoverOnBuiltinStillWorks(t *testing.T) {
 	source := `fetch("url")`
 	hover := getHoverAt(source, 1, 1)

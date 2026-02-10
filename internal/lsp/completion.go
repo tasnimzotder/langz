@@ -16,6 +16,22 @@ func (s *Server) textDocumentCompletion(ctx *glsp.Context, params *protocol.Comp
 	return getCompletionItems(content, line, col), nil
 }
 
+// isDotContext checks if the cursor is immediately after a dot (method completion context).
+func isDotContext(source string, line, col int) bool {
+	tokens := lexer.New(source).Tokenize()
+	for i := range tokens {
+		t := &tokens[i]
+		if t.Line == line && t.Type == lexer.DOT {
+			// Cursor is right after the dot or on the partial ident after it
+			dotEnd := t.Col + 1
+			if col >= dotEnd && col <= dotEnd+20 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func getCompletionItems(source string, line, col int) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 	seen := make(map[string]bool)
@@ -62,6 +78,22 @@ func getCompletionItems(source string, line, col int) []protocol.CompletionItem 
 					Documentation: kw.Desc,
 				})
 			}
+		}
+	}
+
+	// String methods — suggest after dot
+	if isDotContext(source, line, col) {
+		for name, doc := range methodDocs {
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			kind := protocol.CompletionItemKindMethod
+			items = append(items, protocol.CompletionItem{
+				Label:         name,
+				Kind:          &kind,
+				Documentation: doc,
+			})
 		}
 	}
 

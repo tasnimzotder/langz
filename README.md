@@ -82,17 +82,25 @@ fn add(a: int, b: int) -> int {
     return a + b
 }
 
+// Default parameter values
+fn deploy(target: str = "staging") {
+    print("Deploying to {target}")
+}
+
 greet("world")
+deploy()          // uses "staging"
 ```
 
 ### Control Flow
 
 ```
-// if/else
+// if/else/elif
 if status == "ready" {
     print("go")
-} else {
+} else if status == "pending" {
     print("wait")
+} else {
+    print("error")
 }
 
 // for loops
@@ -107,7 +115,7 @@ for i in range(1, 10) {
 // while loops
 while retries > 0 {
     print("trying...")
-    break
+    retries -= 1
 }
 
 // match (compiles to case/esac)
@@ -135,6 +143,40 @@ result = exec("deploy.sh") or {
     print("deploy failed")
     "fallback"
 }
+```
+
+### Indexing
+
+```
+items = ["alpha", "beta", "gamma"]
+val = items[1]         // "beta"
+items[0] = "ALPHA"
+
+config = {host: "localhost", port: "8080"}
+host = config["host"]  // "localhost"
+```
+
+### String Methods
+
+```
+name = "hello world"
+result = name.replace("world", "langz")
+
+if name.contains("hello") {
+    print("found")
+}
+
+if name.starts_with("hello") {
+    print("yes")
+}
+```
+
+### Compound Assignment
+
+```
+count = 0
+count += 5
+total -= 10
 ```
 
 ### Arithmetic
@@ -201,6 +243,15 @@ if a + b > 10 {
 | `len(list)` | List length | `${#list[@]}` |
 | `dirname(path)` | Directory name | `$(dirname "path")` |
 | `basename(path)` | Base name | `$(basename "path")` |
+
+### String Methods
+
+| Method | Description | Bash output |
+|--------|-------------|-------------|
+| `s.replace(old, new)` | Replace all occurrences | `"${s//old/new}"` |
+| `s.contains(sub)` | Check if contains | `[[ "$s" == *"sub"* ]]` |
+| `s.starts_with(pre)` | Check if starts with | `[[ "$s" == "pre"* ]]` |
+| `s.ends_with(suf)` | Check if ends with | `[[ "$s" == *"suf" ]]` |
 
 ### Networking
 

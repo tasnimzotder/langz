@@ -60,6 +60,14 @@ var builtinDocs = map[string]string{
 	"chown": "```\nchown(path, owner)\n```\nChange file owner.\n\nTranspiles to `chown owner path`.",
 }
 
+// methodDocs maps method names to their markdown documentation (for dot-call methods).
+var methodDocs = map[string]string{
+	"replace":     "```\nstr.replace(old, new) -> string\n```\nReplace all occurrences of `old` with `new`.\n\nTranspiles to `\"${str//old/new}\"`.",
+	"contains":    "```\nstr.contains(substr) -> bool\n```\nCheck if string contains substring.\n\nTranspiles to `[[ \"$str\" == *\"substr\"* ]]`.",
+	"starts_with": "```\nstr.starts_with(prefix) -> bool\n```\nCheck if string starts with prefix.\n\nTranspiles to `[[ \"$str\" == \"prefix\"* ]]`.",
+	"ends_with":   "```\nstr.ends_with(suffix) -> bool\n```\nCheck if string ends with suffix.\n\nTranspiles to `[[ \"$str\" == *\"suffix\" ]]`.",
+}
+
 // kwargDoc describes a single keyword argument for a builtin function.
 type kwargDoc struct {
 	Name string

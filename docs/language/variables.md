@@ -27,7 +27,7 @@ LangZ supports these value types:
 | Number | `42` | `42` |
 | Boolean | `true` / `false` | `true` / `false` |
 | List | `["a", "b", "c"]` | `("a" "b" "c")` |
-| Map | `{host: "localhost"}` | `declare -A` |
+| Map | `{host: "localhost"}` | `varname_key=val` |
 
 ## String Interpolation
 
@@ -64,6 +64,43 @@ headers = {"Content-Type": "application/json", "Accept": "text/html"}
 ```
 
 String keys are useful when keys contain special characters like hyphens.
+
+## Indexing
+
+Access array elements by index and map values by string key:
+
+```
+items = ["alpha", "beta", "gamma"]
+first = items[0]
+print(first)
+
+config = {host: "localhost", port: "8080"}
+val = config["host"]
+print(val)
+```
+
+Index assignment:
+
+```
+items[1] = "BETA"
+```
+
+## Compound Assignment
+
+Shorthand operators `+=`, `-=`, `*=`, `/=` for updating variables:
+
+```
+count = 0
+count += 1
+total = 100
+total -= 10
+```
+
+**Generated Bash:**
+```bash
+count=$((count + 1))
+total=$((total - 10))
+```
 
 ## Arithmetic
 

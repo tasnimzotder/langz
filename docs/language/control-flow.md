@@ -18,6 +18,32 @@ if port > 1024 and is_file("config.json") {
 }
 ```
 
+## Elif (Else-If Chaining)
+
+Chain multiple conditions without nesting:
+
+```
+env_name = env("ENV") or "dev"
+if env_name == "production" {
+    print("PROD")
+} else if env_name == "staging" {
+    print("STAGING")
+} else {
+    print("DEV")
+}
+```
+
+**Generated Bash:**
+```bash
+if [ "$env_name" = "production" ]; then
+  echo "PROD"
+elif [ "$env_name" = "staging" ]; then
+  echo "STAGING"
+else
+  echo "DEV"
+fi
+```
+
 ## For Loops
 
 ### Iterate over a list
@@ -54,7 +80,7 @@ while retries > 0 {
     if result != "" {
         break
     }
-    retries = retries - 1
+    retries -= 1
     sleep(1)
 }
 ```

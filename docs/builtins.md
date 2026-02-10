@@ -53,6 +53,32 @@ All built-in functions available in LangZ.
 | `basename(path)` | Filename part of path | `$(basename path)` |
 | `range(start, end)` | Generate number sequence | `$(seq start end)` |
 
+## String Methods
+
+Methods called on string variables:
+
+| Method | Description | Bash |
+|--------|-------------|------|
+| `s.replace(old, new)` | Replace all occurrences | `"${s//old/new}"` |
+| `s.contains(substr)` | Check if string contains substr | `[[ "$s" == *"substr"* ]]` |
+| `s.starts_with(prefix)` | Check if string starts with prefix | `[[ "$s" == "prefix"* ]]` |
+| `s.ends_with(suffix)` | Check if string ends with suffix | `[[ "$s" == *"suffix" ]]` |
+
+`.contains()`, `.starts_with()`, and `.ends_with()` return conditions for use in `if`/`while`:
+
+```
+name = "hello world"
+result = name.replace("world", "langz")
+
+if name.contains("hello") {
+    print("found")
+}
+
+if name.starts_with("hello") {
+    print("starts with hello")
+}
+```
+
 ## Networking
 
 | Function | Description |
