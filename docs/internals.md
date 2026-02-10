@@ -10,9 +10,9 @@ Source (.lz) → Lexer → Parser → AST → Codegen → Bash (.sh)
 
 | Stage | Description |
 |-------|-------------|
-| **Lexer** | Tokenizes source into tokens (identifiers, strings, operators, keywords) |
-| **Parser** | Recursive descent parser builds an Abstract Syntax Tree |
-| **Codegen** | Walks the AST and emits Bash code |
+| **Lexer** | Tokenizes source into tokens (identifiers, strings, operators, keywords). Emits `ILLEGAL` tokens for malformed input. Supports unicode identifiers |
+| **Parser** | Recursive descent parser builds an Abstract Syntax Tree. Reports structured errors for invalid tokens |
+| **Codegen** | Walks the AST and emits Bash code. Marks unhandled nodes with `# error:` comments |
 
 ## Project Structure
 
@@ -67,6 +67,44 @@ Built-in functions are registered in maps (`stmtBuiltins`, `exprBuiltins`) with 
 ### Token-Based LSP
 
 The LSP server uses token streams (not AST) for hover, completion, and definition. This avoids needing position tracking in the AST and keeps the LSP implementation simple and robust.
+
+The server caches tokenized output per document (`Server.tokens` map), populated on `didOpen`/`didChange` and evicted on `didClose`. This avoids re-tokenizing on every hover, completion, or diagnostic request.
+
+## Error Handling Architecture
+
+Errors are handled at each pipeline stage, forming layered protection:
+
+### Lexer: ILLEGAL Tokens
+
+The lexer never silently skips input. Unknown characters and unterminated strings produce `ILLEGAL` tokens with descriptive values:
+
+- `"unterminated string"` -- when a string literal reaches EOF without a closing `"`
+- The character itself (e.g. `"@"`) -- when the lexer encounters an unrecognized character
+
+### Parser: Error Reporting
+
+The parser converts `ILLEGAL` tokens and unexpected token types into structured `ParseError` values:
+
+- `ILLEGAL` tokens: the token's value becomes the error message (e.g. "unterminated string")
+- Unknown tokens: `"unexpected token: <type>"` is reported
+
+Errors accumulate in `Parser.errors` and are returned by `ParseAllErrors()`. The parser continues past errors to report as many as possible.
+
+### Codegen: Error Markers
+
+Unhandled AST node types in `genStatement()` and `genExpr()` emit Bash comments like `# error: unhandled statement type *ast.ExitCall`. The existing `findCodegenErrors()` function scans the generated output for these markers and returns them as structured errors.
+
+### Panic Recovery
+
+All public API entry points use `defer/recover`:
+
+- **`Generate()`** -- returns empty output with `"internal error: ..."` on panic
+- **`ParseWithErrors()`** / **`ParseAllErrors()`** -- returns partial AST with error on panic
+- **Every LSP handler** -- uses a shared `recoverErr()` helper to convert panics to LSP errors, preventing server crashes
+
+### Unicode Support
+
+The lexer operates on runes (not bytes) using `utf8.DecodeRuneInString()`. Identifiers can contain any Unicode letter (`unicode.IsLetter()`) or digit (`unicode.IsDigit()`), supporting non-ASCII variable names like `名前` or `café`.
 
 ## Testing
 

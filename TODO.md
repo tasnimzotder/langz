@@ -18,7 +18,8 @@
 - [x] **VS Code extension** — syntax highlighting + LSP integration
 - [x] **Vim/Neovim plugin** — syntax highlighting + LSP setup
 - [x] **`langz fmt` subcommand** — auto-format `.lz` files
-- [ ] **Better error messages** — include source line context with `^` pointer
+- [x] **Error detection** — ILLEGAL tokens for unterminated strings/unknown chars, parser error reporting, codegen error markers
+- [ ] **Better error messages** — include source line context with `^` pointer in more places
 - [ ] **Treesitter grammar** — for better syntax highlighting in editors
 
 ## More Builtins
