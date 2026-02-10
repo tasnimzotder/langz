@@ -1,0 +1,1353 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A scripting language that transpiles to Bash, designed for DevOps, SRE, and system administration.">
+      
+      
+      
+        <link rel="canonical" href="https://tasnimzotder.github.io/langz/internals/">
+      
+      
+        <link rel="prev" href="../examples/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Internals - LangZ</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#internals" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="LangZ" class="md-header__button md-logo" aria-label="LangZ" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LangZ
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Internals
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tasnimzotder/langz" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tasnimzotder/langz
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="LangZ" class="md-nav__button md-logo" aria-label="LangZ" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    LangZ
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tasnimzotder/langz" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tasnimzotder/langz
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Language Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Language Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language/variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variables & Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language/functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language/control-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language/networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../builtins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Builtins Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editor-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Editor Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internals
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#compilation-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compilation Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Decisions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#no-parser-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No Parser Generator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-codegen-function-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Codegen Function Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#builtin-registry-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Builtin Registry Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statement-level-fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Statement-Level Fetch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#convention-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Convention Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shebang-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shebang Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bash-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bash Blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-resolution-in-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Resolution in CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-error-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Error Reporting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#token-based-lsp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token-Based LSP
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lexer-shebang-and-bash-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lexer: Shebang and Bash Blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lexer-illegal-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lexer: ILLEGAL Tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parser-error-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parser: Error Reporting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codegen-error-markers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen: Error Markers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#panic-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Panic Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unicode-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unicode Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#compilation-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compilation Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Decisions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#no-parser-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No Parser Generator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-codegen-function-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Codegen Function Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#builtin-registry-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Builtin Registry Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statement-level-fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Statement-Level Fetch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#convention-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Convention Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shebang-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shebang Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bash-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bash Blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-resolution-in-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Resolution in CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-error-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Error Reporting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#token-based-lsp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token-Based LSP
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lexer-shebang-and-bash-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lexer: Shebang and Bash Blocks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lexer-illegal-tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lexer: ILLEGAL Tokens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parser-error-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parser: Error Reporting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codegen-error-markers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen: Error Markers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#panic-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Panic Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unicode-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unicode Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="internals">Internals</h1>
+<p>How LangZ works under the hood.</p>
+<h2 id="compilation-pipeline">Compilation Pipeline</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Source (.lz) → Lexer → Parser → AST → Import Resolution → Codegen → Bash (.sh)
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Lexer</strong></td>
+<td>Tokenizes source into tokens (identifiers, strings, operators, keywords). Skips shebang lines (<code>#!...</code>). Captures <code>bash { }</code> blocks as raw <code>BASH_CONTENT</code> tokens with brace-depth tracking. Emits <code>ILLEGAL</code> tokens for malformed input. Supports unicode identifiers</td>
+</tr>
+<tr>
+<td><strong>Parser</strong></td>
+<td>Recursive descent parser builds an Abstract Syntax Tree. Reports structured errors for invalid tokens. Supports <code>ParseAllErrors()</code> for multi-error reporting</td>
+</tr>
+<tr>
+<td><strong>Import Resolution</strong></td>
+<td>CLI walks the AST, finds <code>ImportStmt</code> nodes, reads/lexes/parses imported files, and prepends their statements. Detects circular imports via a visited set. Codegen never touches the filesystem</td>
+</tr>
+<tr>
+<td><strong>Codegen</strong></td>
+<td>Walks the AST and emits Bash code. <code>BashBlock</code> content is emitted verbatim. <code>ImportStmt</code> nodes are skipped (already resolved). Marks unhandled nodes with <code># error:</code> comments</td>
+</tr>
+</tbody>
+</table>
+<h2 id="project-structure">Project Structure</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>langz/
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── cmd/langz/              CLI entry point
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── internal/
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│   ├── ast/                AST node types
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│   ├── lexer/              Tokenizer (tokens.go, lexer.go)
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│   ├── parser/             Recursive descent parser
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│   │   ├── parser.go       Core parser, entry points
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│   │   ├── expressions.go  Expression parsing
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│   │   └── statements.go   Statement parsing
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│   ├── codegen/            Bash code generator
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│   │   ├── codegen.go      Core generator
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│   │   ├── expressions.go  Expression codegen
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│   │   ├── statements.go   Statement codegen
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│   │   ├── fetch.go        fetch() codegen (multi-line curl)
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│   │   └── builtins/       Built-in function registry
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>│   └── lsp/                Language Server Protocol
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>├── editors/vscode/         VS Code extension
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>├── test/integration/       End-to-end tests
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>├── examples/               Example .lz scripts
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>└── docs/                   Documentation (MkDocs)
+</code></pre></div>
+<h2 id="key-design-decisions">Key Design Decisions</h2>
+<h3 id="no-parser-generator">No Parser Generator</h3>
+<p>The parser is hand-written recursive descent. This keeps dependencies minimal and makes the parser easy to extend with new syntax.</p>
+<h3 id="two-codegen-function-types">Two Codegen Function Types</h3>
+<ul>
+<li><strong><code>ExprGen</code></strong> -- generates quoted expressions (e.g. <code>"$var"</code>)</li>
+<li><strong><code>RawValueGen</code></strong> -- generates unquoted values (e.g. <code>var</code> for arithmetic)</li>
+</ul>
+<p>This distinction is critical for Bash correctness. Arithmetic contexts like <code>$((...))</code> need unquoted variable names, while most other contexts need quoted values.</p>
+<h3 id="builtin-registry-pattern">Builtin Registry Pattern</h3>
+<p>Built-in functions are registered in maps (<code>stmtBuiltins</code>, <code>exprBuiltins</code>) with a common handler signature. This makes adding new builtins a one-line change.</p>
+<h3 id="statement-level-fetch">Statement-Level Fetch</h3>
+<p><code>fetch()</code> can't be a simple expression builtin because it needs multi-line output (mktemp, curl, parse status, cleanup). It's intercepted at the codegen level in <code>genAssignment()</code> and <code>genFuncCallStmt()</code> before the normal builtin dispatch.</p>
+<h3 id="convention-variables">Convention Variables</h3>
+<p><code>fetch()</code> sets <code>_status</code>, <code>_body</code>, <code>_headers</code> as global variables. This avoids the need for structured return types while keeping the API simple.</p>
+<h3 id="shebang-handling">Shebang Handling</h3>
+<p>Shebang lines (<code>#!/usr/bin/env langz</code>) are skipped in the lexer, not the parser. This means all consumers (CLI, LSP, tests) get the right behavior without special-casing. The CLI also auto-detects <code>.lz</code> files as <code>argv[1]</code> so shebang execution works (<code>./script.lz</code>).</p>
+<h3 id="bash-blocks">Bash Blocks</h3>
+<p><code>bash { }</code> blocks use a special lexer mode. After the <code>BASH</code> keyword, the lexer switches to <code>readBashContent()</code> which tracks brace depth (depth=1 on entry, +1 on <code>{</code>, -1 on <code>}</code>), respects string literals and comments to avoid false matches, and returns the raw content as a single <code>BASH_CONTENT</code> token. The parser just wraps this into a <code>BashBlock</code> AST node, and codegen emits it verbatim.</p>
+<h3 id="import-resolution-in-cli">Import Resolution in CLI</h3>
+<p>Imports are resolved in the CLI, not in codegen. This keeps codegen pure (no filesystem access). The <code>resolveImports()</code> function walks the AST, finds <code>ImportStmt</code> nodes, reads/lexes/parses imported files, and prepends their statements. A <code>visited</code> set detects circular imports. This is essentially a pre-codegen AST rewriting pass.</p>
+<h3 id="multi-error-reporting">Multi-Error Reporting</h3>
+<p>The CLI uses <code>ParseAllErrors()</code> instead of <code>ParseWithErrors()</code> and displays all errors with source context (file:line:col, source line, ^ pointer). Errors are capped at 10 to avoid flooding the terminal.</p>
+<h3 id="token-based-lsp">Token-Based LSP</h3>
+<p>The LSP server uses token streams (not AST) for hover, completion, and definition. This avoids needing position tracking in the AST and keeps the LSP implementation simple and robust.</p>
+<p>The server caches tokenized output per document (<code>Server.tokens</code> map), populated on <code>didOpen</code>/<code>didChange</code> and evicted on <code>didClose</code>. This avoids re-tokenizing on every hover, completion, or diagnostic request.</p>
+<h2 id="error-handling-architecture">Error Handling Architecture</h2>
+<p>Errors are handled at each pipeline stage, forming layered protection:</p>
+<h3 id="lexer-shebang-and-bash-blocks">Lexer: Shebang and Bash Blocks</h3>
+<p>The lexer handles two special cases before normal tokenization:</p>
+<ul>
+<li><strong>Shebang</strong>: If input starts with <code>#!</code>, the entire first line is skipped</li>
+<li><strong>Bash blocks</strong>: After the <code>BASH</code> keyword, the lexer enters <code>readBashContent()</code> mode, tracking brace depth and respecting string/comment boundaries to capture raw content as a <code>BASH_CONTENT</code> token</li>
+</ul>
+<h3 id="lexer-illegal-tokens">Lexer: ILLEGAL Tokens</h3>
+<p>The lexer never silently skips input. Unknown characters and unterminated strings produce <code>ILLEGAL</code> tokens with descriptive values:</p>
+<ul>
+<li><code>"unterminated string"</code> -- when a string literal reaches EOF without a closing <code>"</code></li>
+<li>The character itself (e.g. <code>"@"</code>) -- when the lexer encounters an unrecognized character</li>
+</ul>
+<h3 id="parser-error-reporting">Parser: Error Reporting</h3>
+<p>The parser converts <code>ILLEGAL</code> tokens and unexpected token types into structured <code>ParseError</code> values:</p>
+<ul>
+<li><code>ILLEGAL</code> tokens: the token's value becomes the error message (e.g. "unterminated string")</li>
+<li>Unknown tokens: <code>"unexpected token: &lt;type&gt;"</code> is reported</li>
+</ul>
+<p>Errors accumulate in <code>Parser.errors</code> and are returned by <code>ParseAllErrors()</code>. The parser continues past errors to report as many as possible.</p>
+<h3 id="codegen-error-markers">Codegen: Error Markers</h3>
+<p>Unhandled AST node types in <code>genStatement()</code> and <code>genExpr()</code> emit Bash comments like <code># error: unhandled statement type *ast.ExitCall</code>. The existing <code>findCodegenErrors()</code> function scans the generated output for these markers and returns them as structured errors.</p>
+<h3 id="panic-recovery">Panic Recovery</h3>
+<p>All public API entry points use <code>defer/recover</code>:</p>
+<ul>
+<li><strong><code>Generate()</code></strong> -- returns empty output with <code>"internal error: ..."</code> on panic</li>
+<li><strong><code>ParseWithErrors()</code></strong> / <strong><code>ParseAllErrors()</code></strong> -- returns partial AST with error on panic</li>
+<li><strong>Every LSP handler</strong> -- uses a shared <code>recoverErr()</code> helper to convert panics to LSP errors, preventing server crashes</li>
+</ul>
+<h3 id="unicode-support">Unicode Support</h3>
+<p>The lexer operates on runes (not bytes) using <code>utf8.DecodeRuneInString()</code>. Identifiers can contain any Unicode letter (<code>unicode.IsLetter()</code>) or digit (<code>unicode.IsDigit()</code>), supporting non-ASCII variable names like <code>名前</code> or <code>café</code>.</p>
+<h2 id="testing">Testing</h2>
+<p>The project uses <a href="https://github.com/stretchr/testify">testify</a> for assertions and <a href="https://github.com/gotestyourself/gotestsum">gotestsum</a> as test runner.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Run all tests</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>gotestsum<span class="w"> </span>--<span class="w"> </span>./...
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Run specific test</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>gotestsum<span class="w"> </span>--<span class="w"> </span>-run<span class="w"> </span>TestName<span class="w"> </span>./path/
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Run integration tests only</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>gotestsum<span class="w"> </span>--<span class="w"> </span>./test/integration/
+</code></pre></div>
+<p>Test categories:</p>
+<ul>
+<li><strong>Parser tests</strong> -- verify AST construction from source</li>
+<li><strong>Codegen tests</strong> -- verify generated Bash from AST</li>
+<li><strong>Integration tests</strong> -- compile LangZ to Bash, execute it, check output</li>
+<li><strong>LSP tests</strong> -- verify diagnostics, hover, completion, signature help</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
