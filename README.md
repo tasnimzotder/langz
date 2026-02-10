@@ -4,13 +4,15 @@ A scripting language that transpiles to Bash, designed for DevOps, SRE, and syst
 
 Write clean, readable scripts in LangZ and compile them to portable Bash that runs anywhere.
 
+> **Note:** This project was entirely created by an LLM ([Claude](https://claude.ai) by Anthropic), including the language design, compiler, LSP server, VS Code extension, tests, and documentation.
+
 ## Why LangZ?
 
 Bash is powerful but hard to read and write correctly. LangZ gives you:
 
 - **Clean syntax** -- no `$`, `fi`, `esac`, or quoting headaches
 - **String interpolation** -- `"Hello {name}"` instead of `"Hello $name"`
-- **Built-in DevOps functions** -- file ops, system info, HTTP fetches
+- **Built-in DevOps functions** -- file ops, system info, HTTP requests, JSON parsing
 - **Safe defaults** -- generates `set -euo pipefail` automatically
 - **Zero runtime** -- compiles to plain Bash, nothing to install on target
 
@@ -195,9 +197,63 @@ if a + b > 10 {
 |----------|-------------|-------------|
 | `upper(s)` | Uppercase | `$(echo "s" \| tr ...)` |
 | `lower(s)` | Lowercase | `$(echo "s" \| tr ...)` |
+| `trim(s)` | Trim whitespace | `$(echo "s" \| xargs)` |
+| `len(list)` | List length | `${#list[@]}` |
 | `dirname(path)` | Directory name | `$(dirname "path")` |
 | `basename(path)` | Base name | `$(basename "path")` |
-| `fetch(url)` | HTTP GET | `$(curl -sf "url")` |
+
+### Networking
+
+| Function | Description |
+|----------|-------------|
+| `fetch(url, ...)` | HTTP request via curl (see below) |
+| `json_get(data, path)` | Extract JSON value via jq |
+
+#### `fetch()` -- Full HTTP Support
+
+```
+// Simple GET
+data = fetch("https://api.example.com/health")
+
+// POST with headers, body, timeout, and retries
+resp = fetch("https://api.example.com/users",
+  method: "POST",
+  body: payload,
+  headers: {"Content-Type": "application/json"},
+  timeout: 10,
+  retries: 3
+)
+
+// Convention variables set after every fetch:
+//   _status  -- HTTP status code (e.g. 200)
+//   _body    -- response body
+//   _headers -- response headers
+
+if _status == 200 {
+  name = json_get(_body, ".name")
+  print("Created: {name}")
+}
+
+// Error fallback with `or`
+data = fetch("https://api.example.com/data") or "unavailable"
+```
+
+Supported keyword arguments:
+
+| Kwarg | Description | Default |
+|-------|-------------|---------|
+| `method:` | HTTP method (GET, POST, PUT, PATCH, DELETE) | GET |
+| `body:` | Request body data | none |
+| `headers:` | Request headers as map | none |
+| `timeout:` | Max seconds to wait | none |
+| `retries:` | Number of retry attempts | none |
+
+### Date/Time
+
+| Function | Description | Bash output |
+|----------|-------------|-------------|
+| `timestamp()` | Unix timestamp | `$(date +%s)` |
+| `date()` | Current date (YYYY-MM-DD) | `$(date +"%Y-%m-%d")` |
 
 ## Example: Deployment Script
 
@@ -263,6 +319,20 @@ esac
 log "Done!"
 ```
 
+## Editor Support
+
+LangZ includes a built-in LSP server with:
+
+- **Diagnostics** -- real-time parse error highlighting
+- **Hover** -- documentation for all builtins and keyword arguments
+- **Completion** -- builtins, keywords, user-defined symbols, and context-aware kwarg suggestions inside function calls
+- **Signature help** -- parameter hints when typing function calls
+- **Go-to-definition** -- jump to variable and function definitions
+- **Document symbols** -- outline view of variables and functions
+- **Formatting** -- auto-format `.lz` files
+
+A VS Code extension is included in the `editors/vscode/` directory.
+
 ## Project Structure
 
 ```
@@ -272,8 +342,10 @@ langz/
 │   ├── ast/            Abstract syntax tree nodes
 │   ├── lexer/          Tokenizer
 │   ├── parser/         Recursive descent parser
-│   └── codegen/        Bash code generator
-│       └── builtins/   Built-in function registry
+│   ├── codegen/        Bash code generator
+│   │   └── builtins/   Built-in function registry
+│   └── lsp/            Language Server Protocol
+├── editors/vscode/     VS Code extension
 ├── test/integration/   End-to-end tests
 ├── examples/           Example .lz scripts
 └── go.mod
