@@ -1,0 +1,39 @@
+site_name: LangZ
+site_url: https://tasnimzotder.github.io/langz
+site_description: A scripting language that transpiles to Bash, designed for DevOps, SRE, and system administration.
+repo_url: https://github.com/tasnimzotder/langz
+repo_name: tasnimzotder/langz
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: teal
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Language Guide:
+      - Variables & Types: language/variables.md
+      - Functions: language/functions.md
+      - Control Flow: language/control-flow.md
+      - Error Handling: language/error-handling.md
+      - Networking: language/networking.md
+  - Builtins Reference: builtins.md
+  - Editor Support: editor-support.md
+  - Examples: examples.md
+  - Internals: internals.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
